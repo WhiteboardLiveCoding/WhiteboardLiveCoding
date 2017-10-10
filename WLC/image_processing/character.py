@@ -1,13 +1,11 @@
 import cv2
 
+from WLC.image_processing.extended_image import ExtendedImage
 
-class Character:
-    def __init__(self, gray_image, x, y, w, h):
-        self._gray_image = gray_image
-        self._x = x
-        self._y = y
-        self._w = w
-        self._h = h
+
+class Character(ExtendedImage):
+    def __init__(self, image, x, y, w, h):
+        super().__init__(image, x, y, w, h)
 
     def get_code(self):
         return ""
