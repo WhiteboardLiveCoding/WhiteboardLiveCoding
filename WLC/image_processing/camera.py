@@ -4,10 +4,10 @@ from WLC.image_processing.picture import Picture
 
 
 class Camera:
+    _camera_id = None
+
     def __init__(self):
         pass
-
-    _camera_id = None
 
     def _get_device(self):
         """
@@ -41,4 +41,6 @@ class Camera:
         # cap = cv2.VideoCapture(camera_id)
         # ret, frame = cap.read()
 
-        return Picture(cv2.imread('input.jpg'))
+        img = cv2.imread('input.jpg')
+        height, width, _ = img.shape
+        return Picture(img, 0, 0, width, height)

@@ -1,22 +1,17 @@
 import cv2
 import numpy as np
 
+from WLC.image_processing.extended_image import ExtendedImage
 from WLC.image_processing.line import Line
 
 
-class Picture:
-    def __init__(self, image):
-        self._image = image
+class Picture(ExtendedImage):
+    def __init__(self, image, x, y, w, h):
+        super().__init__(image, x, y, w, h)
 
     def get_code(self):
-        gray_image = self._grayscale()
-        lines = self._segment_image(gray_image)
+        lines = self._segment_image(self.get_image())
         return self._merge_code(lines)
-
-    def _grayscale(self):
-        gray_image = cv2.cvtColor(self._image, cv2.COLOR_BGR2GRAY)
-        ret, gray_image = cv2.threshold(gray_image, 127, 255, cv2.THRESH_BINARY_INV)
-        return gray_image
 
     def _segment_image(self, gray_image):
         # dilation
