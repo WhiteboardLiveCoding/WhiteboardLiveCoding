@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from line import Line
+from WLC.image_processing.line import Line
 
 
 class Picture:
@@ -52,8 +52,12 @@ class Picture:
         Should return a string with the code from all of the lines, this function will also have to figure out how far
         each line is indented.
         """
-        # ToDo: Actually do something with the code
+        # TODO: Actually do something with the code
         for line in lines:
             line.get_code()
 
         return ""
+
+# show images with:
+# cv2.imshow('file', img)
+# cv2.waitKey(0)

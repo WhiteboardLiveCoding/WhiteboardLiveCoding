@@ -1,9 +1,12 @@
 import cv2
 
-from picture import Picture
+from WLC.image_processing.picture import Picture
 
 
 class Camera:
+    def __init__(self):
+        pass
+
     _camera_id = None
 
     def _get_device(self):
@@ -33,9 +36,9 @@ class Camera:
         return camera_id
 
     def capture(self):
-        camera_id = self._get_device()
+        # camera_id = self._get_device()
 
-        cap = cv2.VideoCapture(camera_id)
-        ret, frame = cap.read()
+        # cap = cv2.VideoCapture(camera_id)
+        # ret, frame = cap.read()
 
         return Picture(cv2.imread('input.jpg'))

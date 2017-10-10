@@ -1,10 +1,10 @@
 import cv2
 import numpy as np
 
-from character import Character
+from WLC.image_processing.word import Word
 
 
-class Word:
+class Line:
     def __init__(self, gray_image, x, y, w, h):
         self._gray_image = gray_image
         self._x = x
@@ -13,12 +13,12 @@ class Word:
         self._h = h
 
     def get_code(self):
-        characters = self._segment_image()
-        return self._merge_code(characters)
+        words = self._segment_image()
+        return self._merge_code(words)
 
     def _segment_image(self):
         # dilation
-        kernel = np.ones((20, 2), np.uint8)
+        kernel = np.ones((20, 20), np.uint8)
         img = cv2.dilate(self._gray_image, kernel, iterations=1)
 
         # find contours
@@ -35,16 +35,16 @@ class Word:
 
             # Getting ROI
             roi = self._gray_image[y:y + h, x:x + w]
-            words.append(Character(roi, x, y, w, h))
+            words.append(Word(roi, x, y, w, h))
 
         return words
 
-    def _merge_code(self, characters):
+    def _merge_code(self, words):
         """
         Merges all of the words into a line of code
         """
-        # ToDo: Actually do something with the code
-        for character in characters:
-            character.get_code()
+        # TODO: Actually do something with the code
+        for word in words:
+            word.get_code()
 
         return ""
