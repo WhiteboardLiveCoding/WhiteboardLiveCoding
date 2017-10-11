@@ -1,2 +1,5 @@
 opencv-python
 numpy
+imutils
+scikit-image
+scipy
