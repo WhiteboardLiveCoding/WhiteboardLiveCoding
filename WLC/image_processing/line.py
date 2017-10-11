@@ -7,6 +7,8 @@ from WLC.image_processing.word import Word
 
 class Line(ExtendedImage):
     def __init__(self, image, x, y, w, h):
+        cv2.imshow("Scanned", image)
+        cv2.waitKey(0)
         super().__init__(image, x, y, w, h)
 
     def get_code(self):

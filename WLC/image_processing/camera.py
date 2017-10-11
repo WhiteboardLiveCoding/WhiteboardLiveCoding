@@ -41,6 +41,6 @@ class Camera:
         # cap = cv2.VideoCapture(camera_id)
         # ret, frame = cap.read()
 
-        img = cv2.imread('input.jpg')
+        img = cv2.imread('../input.jpg')
         height, width, _ = img.shape
         return Picture(img, 0, 0, width, height)
