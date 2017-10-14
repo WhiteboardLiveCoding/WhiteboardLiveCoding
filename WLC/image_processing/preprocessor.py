@@ -24,8 +24,8 @@ class Preprocessor:
         (_, contours, _) = cv2.findContours(edged.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
 
-        screenCnt = None
-        edgesFound = False
+        screen_cnt = None
+        edges_found = False
         for c in contours:
             # approximate the contour
             peri = cv2.arcLength(c, True)
@@ -33,22 +33,23 @@ class Preprocessor:
 
             # Transform only if we can see 4 edges
             if len(approx) == 4:
-                screenCnt = approx
-                edgesFound = True
+                screen_cnt = approx
+                edges_found = True
                 break
 
-        if edgesFound:
+        if edges_found:
             # get top-down view of image
-            warped = self.four_point_transform(orig, screenCnt.reshape(4, 2) * ratio)
+            warped = self.four_point_transform(orig, screen_cnt.reshape(4, 2) * ratio)
 
             # put fancy filters on the image
             warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
             warped = threshold_adaptive(warped, 251, offset=10)
             warped = warped.astype("uint8") * 255
 
-            cv2.imshow("Original", imutils.resize(orig, height=650))
-            cv2.imshow("Scanned", imutils.resize(warped, height=650))
-            cv2.waitKey(0)
+            if extended_image.show_pics:
+                cv2.imshow("Original", imutils.resize(orig, height=650))
+                cv2.imshow("Scanned", imutils.resize(warped, height=650))
+                cv2.waitKey(0)
         else:
             # Else we do our usual stuff
             image = extended_image.get_image()
@@ -82,23 +83,23 @@ class Preprocessor:
         rect = self.order_points(pts)
         (tl, tr, br, bl) = rect
 
-        widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        maxWidth = max(int(widthA), int(widthB))
+        width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        max_width = max(int(width_a), int(width_b))
 
-        heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-        heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-        maxHeight = max(int(heightA), int(heightB))
+        height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+        height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+        max_height = max(int(height_a), int(height_b))
 
         dst = np.array([
             [0, 0],
-            [maxWidth - 1, 0],
-            [maxWidth - 1, maxHeight - 1],
-            [0, maxHeight - 1]], dtype="float32")
+            [max_width - 1, 0],
+            [max_width - 1, max_height - 1],
+            [0, max_height - 1]], dtype="float32")
 
         # compute the perspective transform matrix and then apply it
         M = cv2.getPerspectiveTransform(rect, dst)
-        warped = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
+        warped = cv2.warpPerspective(image, M, (max_width, max_height))
 
         # return the warped image
         return warped

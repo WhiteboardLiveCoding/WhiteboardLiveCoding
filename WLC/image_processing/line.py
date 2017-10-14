@@ -6,10 +6,11 @@ from WLC.image_processing.word import Word
 
 
 class Line(ExtendedImage):
-    def __init__(self, image, x, y, w, h):
-        cv2.imshow("Scanned", image)
-        cv2.waitKey(0)
-        super().__init__(image, x, y, w, h)
+    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
+        super().__init__(image, x_axis, y_axis, width, height, to_show)
+        if self.show_line:
+            cv2.imshow("Line", image)
+            cv2.waitKey(0)
 
     def get_code(self):
         words = self._segment_image()
@@ -34,7 +35,7 @@ class Line(ExtendedImage):
 
             # Getting ROI
             roi = self.get_image()[y:y + h, x:x + w]
-            words.append(Word(roi, x, y, w, h))
+            words.append(Word(roi, x, y, w, h, self))
 
         return words
 

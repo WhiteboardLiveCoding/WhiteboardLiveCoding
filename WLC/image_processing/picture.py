@@ -10,8 +10,11 @@ from WLC.image_processing.line import Line
 class Picture(ExtendedImage):
     INDENTATION_THRESHOLD = 50
 
-    def __init__(self, image, x, y, w, h):
-        super().__init__(image, x, y, w, h)
+    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
+        super().__init__(image, x_axis, y_axis, width, height, to_show)
+        if self.show_pic:
+            cv2.imshow("Full picture", image)
+            cv2.waitKey(0)
 
     def get_code(self):
         lines = self._segment_image(self.get_image())
@@ -42,7 +45,7 @@ class Picture(ExtendedImage):
 
             # Getting ROI
             roi = gray_image[y:y + h, x:x + w]
-            lines.append(Line(roi, x, y, w, h))
+            lines.append(Line(roi, x, y, w, h, self))
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())
@@ -114,7 +117,3 @@ class Picture(ExtendedImage):
                 indentation = i
 
         return indentation
-
-# show images with:
-# cv2.imshow('file', img)
-# cv2.waitKey(0)
