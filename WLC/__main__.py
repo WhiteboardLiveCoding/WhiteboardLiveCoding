@@ -1,6 +1,11 @@
 from WLC.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
+from WLC.ocr.ocr import OCR
+
+
+def load_ocr_model():
+    OCR()
 
 
 def main():
