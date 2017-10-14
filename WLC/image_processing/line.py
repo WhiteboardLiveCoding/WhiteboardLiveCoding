@@ -8,8 +8,10 @@ from WLC.image_processing.word import Word
 class Line(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
         super().__init__(image, x_axis, y_axis, width, height, to_show)
+        self._fix_rotation()
+
         if self.show_line:
-            cv2.imshow("Line", image)
+            cv2.imshow("Line", self.get_image())
             cv2.waitKey(0)
 
     def get_code(self):

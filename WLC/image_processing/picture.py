@@ -21,7 +21,28 @@ class Picture(ExtendedImage):
         return self._merge_code(lines)
 
     def _segment_image(self, gray_image):
-        # dilation
+        img = self._prepare_for_contouring(gray_image)
+        sorted_ctrs = self._find_contours(img)
+
+        lines = list()
+
+        for i, ctr in enumerate(sorted_ctrs):
+            # Get bounding box
+            x, y, w, h = cv2.boundingRect(ctr)
+
+            roi = gray_image[y:y + h, x:x + w]
+            mask = self._get_mask(img, sorted_ctrs, i)[y:y + h, x:x + w]
+
+            result = cv2.bitwise_and(roi, roi, mask=mask)
+
+            lines.append(Line(result, x, y, w, h, self))
+
+        # Sort lines based on y offset
+        lines = sorted(lines, key=lambda line: line.get_y())
+
+        return lines
+
+    def _prepare_for_contouring(self, gray_image):
         kernel = np.ones((5, 20), np.uint8)
         img = cv2.dilate(gray_image, kernel, iterations=1)
 
@@ -31,26 +52,16 @@ class Picture(ExtendedImage):
         kernel = np.ones((1, 100), np.uint8)
         img = cv2.dilate(img, kernel, iterations=1)
 
-        # find contours
+        return img
+
+    def _find_contours(self, img):
         im2, ctrs, hier = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        return sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
-        # sort contours
-        sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
-
-        lines = list()
-
-        for i, ctr in enumerate(sorted_ctrs):
-            # Get bounding box
-            x, y, w, h = cv2.boundingRect(ctr)
-
-            # Getting ROI
-            roi = gray_image[y:y + h, x:x + w]
-            lines.append(Line(roi, x, y, w, h, self))
-
-        # Sort lines based on y offset
-        lines = sorted(lines, key=lambda line: line.get_y())
-
-        return lines
+    def _get_mask(self, img, contours, contour_index):
+        mask = np.zeros_like(img)
+        cv2.drawContours(mask, contours, contour_index, 255, -1)
+        return mask
 
     def _merge_code(self, lines):
         """
