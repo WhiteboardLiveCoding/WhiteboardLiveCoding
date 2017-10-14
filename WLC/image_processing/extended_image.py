@@ -40,6 +40,7 @@ class ExtendedImage:
     def get_code(self):
         raise NotImplementedError("get_code not implemented")
 
+
 class ToShow:
     def __init__(self, show_pic=False, show_line=False, show_word=False, show_char=False):
         self.show_pic = show_pic
