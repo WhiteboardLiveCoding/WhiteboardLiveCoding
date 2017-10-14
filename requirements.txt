@@ -3,3 +3,6 @@ numpy
 imutils
 scikit-image
 scipy
+tensorflow
+keras
+h5py
