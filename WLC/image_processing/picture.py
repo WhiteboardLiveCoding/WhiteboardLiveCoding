@@ -6,8 +6,13 @@ from WLC.image_processing.line import Line
 
 
 class Picture(ExtendedImage):
-    def __init__(self, image, x, y, w, h):
-        super().__init__(image, x, y, w, h)
+    def __init__(self, image, x_axis, y_axis, width, height, extended_image=None,
+                 show_pic=False, show_line=False, show_word=False, show_char=False):
+        super().__init__(image, x_axis, y_axis, width, height, extended_image,
+                         show_pic, show_line, show_word, show_char)
+        if self.show_pic:
+            cv2.imshow("Full picture", image)
+            cv2.waitKey(0)
 
     def get_code(self):
         lines = self._segment_image(self.get_image())
@@ -38,7 +43,7 @@ class Picture(ExtendedImage):
 
             # Getting ROI
             roi = gray_image[y:y + h, x:x + w]
-            lines.append(Line(roi, x, y, w, h))
+            lines.append(Line(roi, x, y, w, h, self))
 
         return lines
 

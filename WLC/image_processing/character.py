@@ -9,16 +9,19 @@ STD_IMAGE_SIZE = 28
 
 
 class Character(ExtendedImage):
-    def __init__(self, image, x, y, w, h):
-        super().__init__(image, x, y, w, h)
+    def __init__(self, image, x_axis, y_axis, width, height, extended_image=None,
+                 show_pic=False, show_line=False, show_word=False, show_char=False):
+        super().__init__(image, x_axis, y_axis, width, height, extended_image,
+                         show_pic, show_line, show_word, show_char)
         self.ocr = OCR()
 
-    def get_code(self):
-        # TODO: plugin to tensorflow
-        img = self.transform_to_standard()
+        if self.show_char:
+            cv2.imshow("Character", image)
+            cv2.waitKey(0)
 
-        # cv2.imshow("char", img)
-        # cv2.waitKey(0)
+    def get_code(self):
+        # TODO: plugin to Tensorflow/Keras
+        img = self.transform_to_standard()
 
         return self.ocr.predict(img)
 
@@ -44,5 +47,10 @@ class Character(ExtendedImage):
         # NOTE: currently shrinks and stretches
         # ideally, we'd want to strip from the top and pad the sides to make it a square. TODO as future optimisation
         res = cv2.resize(img, (STD_IMAGE_SIZE, STD_IMAGE_SIZE))
+
+        if self.show_char:
+            # cv2.imshow("Original Character", img)
+            cv2.imshow("Resized Character", res)
+            cv2.waitKey(0)
 
         return res

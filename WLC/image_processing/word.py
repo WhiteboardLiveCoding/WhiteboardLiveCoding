@@ -6,8 +6,14 @@ from WLC.image_processing.extended_image import ExtendedImage
 
 
 class Word(ExtendedImage):
-    def __init__(self, image, x, y, w, h):
-        super().__init__(image, x, y, w, h)
+    def __init__(self, image, x_axis, y_axis, width, height, extended_image=None,
+                 show_pic=False, show_line=False, show_word=False, show_char=False):
+        super().__init__(image, x_axis, y_axis, width, height, extended_image,
+                         show_pic, show_line, show_word, show_char)
+
+        if self.show_word:
+            cv2.imshow("Word", image)
+            cv2.waitKey(0)
 
     def get_code(self):
         characters = self._segment_image()
@@ -28,11 +34,11 @@ class Word(ExtendedImage):
 
         for i, ctr in enumerate(sorted_ctrs):
             # Get bounding box
-            x, y, w, h = cv2.boundingRect(ctr)
+            x_axis, y_axis, width, height = cv2.boundingRect(ctr)
 
             # Getting ROI
-            roi = self.get_image()[y:y + h, x:x + w]
-            words.append(Character(roi, x, y, w, h))
+            roi = self.get_image()[y_axis:y_axis + height, x_axis:x_axis + width]
+            words.append(Character(roi, x_axis, y_axis, width, height, self))
 
         return words
 

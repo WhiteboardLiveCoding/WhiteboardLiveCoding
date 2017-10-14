@@ -46,9 +46,10 @@ class Preprocessor:
             warped = threshold_adaptive(warped, 251, offset=10)
             warped = warped.astype("uint8") * 255
 
-            cv2.imshow("Original", imutils.resize(orig, height=650))
-            cv2.imshow("Scanned", imutils.resize(warped, height=650))
-            cv2.waitKey(0)
+            if extended_image.show_pics:
+                cv2.imshow("Original", imutils.resize(orig, height=650))
+                cv2.imshow("Scanned", imutils.resize(warped, height=650))
+                cv2.waitKey(0)
         else:
             # Else we do our usual stuff
             image = extended_image.get_image()
