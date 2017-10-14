@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import sys
 
 from WLC.image_processing.character import Character
 from WLC.image_processing.extended_image import ExtendedImage
@@ -18,27 +19,36 @@ class Word(ExtendedImage):
         return self._merge_code(characters)
 
     def _segment_image(self):
-        # dilation
-        kernel = np.ones((20, 2), np.uint8)
-        img = cv2.dilate(self.get_image(), kernel, iterations=1)
-
         # find contours
-        im2, ctrs, hier = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        im2, ctrs, hier = cv2.findContours(self.get_image(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # sort contours
         sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
         words = list()
+        previous_x = sys.maxsize
 
         for i, ctr in enumerate(sorted_ctrs):
-            # Get bounding box
             x_axis, y_axis, width, height = cv2.boundingRect(ctr)
 
-            # Getting ROI
-            roi = self.get_image()[y_axis:y_axis + height, x_axis:x_axis + width]
-            words.append(Character(roi, x_axis, y_axis, width, height, self))
+            if height * width > 5 * 5 and abs(x_axis - previous_x) > 10:
+                roi = self.get_image()[0:self.get_height(), x_axis:x_axis + width]
+
+                min_y, max_y = self._truncate_black_borders(roi)
+                roi = roi[min_y:max_y]
+
+                words.append(Character(roi, x_axis, y_axis, width, height, self))
+                previous_x = x_axis
 
         return words
+
+    def _truncate_black_borders(self, img):
+        results = list(map(lambda row: sum(row), img))
+
+        min_y = next(x[0] for x in enumerate(results) if x[1] > 0)
+        max_y = next(x[0] for x in enumerate(reversed(results)) if x[1] > 0)
+
+        return min_y, len(results)-max_y
 
     def _merge_code(self, characters):
         """
