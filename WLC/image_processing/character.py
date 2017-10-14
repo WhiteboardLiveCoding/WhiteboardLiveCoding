@@ -54,19 +54,14 @@ class Character(ExtendedImage):
         img = self.get_image()
 
         maximum_dimension = max(self.get_width(), self.get_height())
-        scale = STD_IMAGE_SIZE / maximum_dimension
 
-        scaled_width = floor(self.get_width() * scale)
-        scaled_height = floor(self.get_height() * scale)
+        top = floor((maximum_dimension - self.get_height()) / 2)
+        bottom = ceil((maximum_dimension - self.get_height()) / 2)
+        left = floor((maximum_dimension - self.get_width()) / 2)
+        right = ceil((maximum_dimension - self.get_width()) / 2)
 
-        res = cv2.resize(img, (scaled_width, scaled_height))
-
-        top = floor((STD_IMAGE_SIZE - scaled_height) / 2)
-        bottom = ceil((STD_IMAGE_SIZE - scaled_height) / 2)
-        left = floor((STD_IMAGE_SIZE - scaled_width) / 2)
-        right = ceil((STD_IMAGE_SIZE - scaled_width) / 2)
-
-        res = cv2.copyMakeBorder(res, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+        res = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+        res = cv2.resize(res, (STD_IMAGE_SIZE, STD_IMAGE_SIZE))
 
         if self.show_char:
             # cv2.imshow("Original Character", img)

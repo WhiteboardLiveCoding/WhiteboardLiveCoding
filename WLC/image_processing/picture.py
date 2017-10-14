@@ -35,9 +35,7 @@ class Picture(ExtendedImage):
 
             result = cv2.bitwise_and(roi, roi, mask=mask)
 
-            horizontal = self._fix_skewed_line(result)
-
-            lines.append(Line(horizontal, x, y, w, h, self))
+            lines.append(Line(result, x, y, w, h, self))
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())
@@ -64,31 +62,6 @@ class Picture(ExtendedImage):
         mask = np.zeros_like(img)
         cv2.drawContours(mask, contours, contour_index, 255, -1)
         return mask
-
-    def _fix_skewed_line(self, img):
-        angle = self._calculate_skewed_angle(img)
-        return self._rotate_image(img, angle)
-
-    def _calculate_skewed_angle(self, img):
-        coords = np.column_stack(np.where(img > 0))
-        angle = cv2.minAreaRect(coords)[-1]
-
-        if angle < -45:
-            return -(90 + angle)
-        else:
-            return -angle
-
-    def _rotate_image(self, img, angle):
-        # Pad image so that you don't have 'drag' lines when rotating
-        img = cv2.copyMakeBorder(img, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-
-        # Calculate center, the pivot point of rotation
-        (h, w) = img.shape[:2]
-        center = (w // 2, h // 2)
-
-        # Rotate
-        M = cv2.getRotationMatrix2D(center, angle, 1.0)
-        return cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
     def _merge_code(self, lines):
         """

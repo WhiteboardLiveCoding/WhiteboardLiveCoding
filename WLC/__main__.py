@@ -32,7 +32,7 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False)
     image = Preprocessor().process(picture)
 
     print("Obtaining code")
-    code = image.get_code()
+    code = image.get_code().lower()
 
     CodeExecutor().execute_code(code)
 
