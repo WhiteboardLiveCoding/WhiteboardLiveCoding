@@ -1,6 +1,7 @@
 import cv2
 
 from WLC.image_processing.extended_image import ExtendedImage
+from WLC.ocr.ocr import OCR
 
 
 # the MNIST standard image size.
@@ -10,6 +11,7 @@ STD_IMAGE_SIZE = 28
 class Character(ExtendedImage):
     def __init__(self, image, x, y, w, h):
         super().__init__(image, x, y, w, h)
+        self.ocr = OCR()
 
     def get_code(self):
         # TODO: plugin to tensorflow
@@ -18,7 +20,7 @@ class Character(ExtendedImage):
         # cv2.imshow("char", img)
         # cv2.waitKey(0)
 
-        return ""
+        return self.ocr.predict(img)
 
     def classify(self):
         """
