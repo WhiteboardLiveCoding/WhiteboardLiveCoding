@@ -34,16 +34,15 @@ class OCR(metaclass=Singleton):
         self.mapping = pickle.load(open(mapping_path, 'rb'))
 
     def predict(self, char):
-        x = np.invert(char);
-        x = x.reshape(1, 28, 28, 1)
+        char = char.reshape(1, 28, 28, 1)
 
-        x = x.astype('float32')
+        char = char.astype('float32')
 
         # Normalize to prevent issues with model
-        x /= 255
+        char /= 255
 
-        out = self.model.predict(x)
+        prediction = self.model.predict(char)
 
-        response = chr(self.mapping[(int(np.argmax(out, axis=1)[0]))])
+        character = chr(self.mapping[(int(np.argmax(prediction, axis=1)[0]))])
 
-        return response
+        return character
