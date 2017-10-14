@@ -3,6 +3,10 @@ import cv2
 from WLC.image_processing.extended_image import ExtendedImage
 
 
+# the MNIST standard image size.
+STD_IMAGE_SIZE = 28
+
+
 class Character(ExtendedImage):
     def __init__(self, image, x, y, w, h):
         super().__init__(image, x, y, w, h)
@@ -34,6 +38,9 @@ class Character(ExtendedImage):
         done so that we can use neural networks to figure out the letter
         """
         img = self.get_image()
-        # TODO: transform
 
-        return img
+        # NOTE: currently shrinks and stretches
+        # ideally, we'd want to strip from the top and pad the sides to make it a square. TODO as future optimisation
+        res = cv2.resize(img, (STD_IMAGE_SIZE, STD_IMAGE_SIZE))
+
+        return res
