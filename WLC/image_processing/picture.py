@@ -1,3 +1,5 @@
+import sys
+
 import cv2
 import numpy as np
 
@@ -6,6 +8,8 @@ from WLC.image_processing.line import Line
 
 
 class Picture(ExtendedImage):
+    INDENTATION_THRESHOLD = 50
+
     def __init__(self, image, x, y, w, h):
         super().__init__(image, x, y, w, h)
 
@@ -50,9 +54,66 @@ class Picture(ExtendedImage):
         Should return a string with the code from all of the lines, this function will also have to figure out how far
         each line is indented.
         """
-        # TODO: Actually do something with the code
+        indent = self._determine_indentation(lines)
+        return "\n".join("{indent}{code}".format(indent="  " * indent, code=line.get_code())
+                         for indent, line in zip(indent, lines))
 
-        return "\n".join(line.get_code() for line in lines)  # Note: joining on newlines
+    def _determine_indentation(self, lines):
+        """
+        Returns a list of indentation distances for each line
+        """
+        if not lines:
+            return []
+
+        indents = list()
+        indent_locations = list()
+
+        indents.append(0)
+        indent_locations.append([lines[0].get_x()])
+
+        for line in lines[1:]:
+            if self._is_before_first_indent(line, indent_locations):
+                indent_locations[0].append(line.get_x())
+                indents.append(0)
+            elif self._is_after_last_indent(line, indent_locations):
+                indent_locations.append([line.get_x()])
+                indents.append(len(indent_locations) - 1)
+            else:
+                indentation = self._get_closest_indentation(line, indent_locations)
+
+                if indentation is not None:
+                    indent_locations[indentation].append(line.get_x())
+                    indents.append(indentation)
+                else:
+                    raise ValueError("Could not determine indentation")
+
+        return indents
+
+    def _is_before_first_indent(self, line, indent_locations):
+        """
+        Returns whether this line is indented less than the currently least indented line.
+        """
+        return line.get_x() < np.mean(indent_locations[0]) - self.INDENTATION_THRESHOLD
+
+    def _is_after_last_indent(self, line, indent_locations):
+        """
+        Returns whether this line is indented further than the currently most indented line.
+        """
+        return line.get_x() > np.mean(indent_locations[-1]) + self.INDENTATION_THRESHOLD
+
+    def _get_closest_indentation(self, line, indent_locations):
+        """
+        Returns how far the line should be indented based on looking at other lines and finding the closest match.
+        """
+        distance = sys.maxsize
+        indentation = None
+
+        for i in range(len(indent_locations)):
+            if abs(np.mean(indent_locations[i]) - line.get_x()) < distance:
+                distance = abs(np.mean(indent_locations[i]) - line.get_x())
+                indentation = i
+
+        return indentation
 
 # show images with:
 # cv2.imshow('file', img)
