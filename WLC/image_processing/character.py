@@ -42,8 +42,8 @@ class Character(ExtendedImage):
         """
         img = self._resize()
 
-        cv2.imshow('resized', img)
-        cv2.waitKey(0)
+        # cv2.imshow('resized', img)
+        # cv2.waitKey(0)
 
         return img
 

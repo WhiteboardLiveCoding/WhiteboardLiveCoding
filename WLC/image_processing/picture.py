@@ -45,6 +45,18 @@ class Picture(ExtendedImage):
 
             # Getting ROI
             roi = gray_image[y:y + h, x:x + w]
+
+            mask = np.zeros_like(img)
+            cv2.drawContours(mask, sorted_ctrs, i, 255, -1)
+            mask = mask[y:y + h, x:x + w]
+            result = cv2.bitwise_and(roi, roi, mask=mask)
+
+            cv2.imshow('Roi', roi)
+            cv2.imshow('Mask', mask)
+            cv2.imshow('Results', result)
+            # cv2.imshow('Gray Image', gray_image[y:y + h, x:x + w])
+            cv2.waitKey(0)
+
             lines.append(Line(roi, x, y, w, h, self))
 
         # Sort lines based on y offset
