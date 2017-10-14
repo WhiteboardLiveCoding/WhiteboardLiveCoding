@@ -40,6 +40,9 @@ class Picture(ExtendedImage):
             roi = gray_image[y:y + h, x:x + w]
             lines.append(Line(roi, x, y, w, h))
 
+        # Sort lines based on y offset
+        lines = sorted(lines, key=lambda line: line.get_y())
+
         return lines
 
     def _merge_code(self, lines):
