@@ -41,7 +41,4 @@ class Word(ExtendedImage):
         Merges all of the words into a line of code
         """
         # TODO: Actually do something with the code
-        for character in characters:
-            character.get_code()
-
-        return ""
+        return "".join(character.get_code() for character in characters)

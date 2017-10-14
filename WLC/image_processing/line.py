@@ -43,7 +43,4 @@ class Line(ExtendedImage):
         Merges all of the words into a line of code
         """
         # TODO: Actually do something with the code
-        for word in words:
-            word.get_code()
-
-        return ""
+        return " ".join(word.get_code() for word in words)  # TODO: join on more than just spaces?

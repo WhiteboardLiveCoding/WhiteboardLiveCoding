@@ -48,10 +48,8 @@ class Picture(ExtendedImage):
         each line is indented.
         """
         # TODO: Actually do something with the code
-        for line in lines:
-            line.get_code()
 
-        return ""
+        return "\n".join(line.get_code() for line in lines)  # Note: joining on newlines
 
 # show images with:
 # cv2.imshow('file', img)
