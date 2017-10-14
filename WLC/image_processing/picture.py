@@ -56,6 +56,9 @@ class Picture(ExtendedImage):
                          for indent, line in zip(indent, lines))
 
     def _determine_indentation(self, lines):
+        """
+        Returns a list of indentation distances for each line
+        """
         if not lines:
             return []
 
@@ -84,12 +87,21 @@ class Picture(ExtendedImage):
         return indents
 
     def _is_before_first_indent(self, line, indent_locations):
+        """
+        Returns whether this line is indented less than the currently least indented line.
+        """
         return line.get_x() < np.mean(indent_locations[0]) - self.INDENTATION_THRESHOLD
 
     def _is_after_last_indent(self, line, indent_locations):
+        """
+        Returns whether this line is indented further than the currently most indented line.
+        """
         return line.get_x() > np.mean(indent_locations[-1]) + self.INDENTATION_THRESHOLD
 
     def _get_closest_indentation(self, line, indent_locations):
+        """
+        Returns how far the line should be indented based on looking at other lines and finding the closest match.
+        """
         distance = sys.maxsize
         indentation = None
 
