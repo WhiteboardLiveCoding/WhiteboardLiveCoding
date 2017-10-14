@@ -6,10 +6,8 @@ from WLC.image_processing.extended_image import ExtendedImage
 
 
 class Word(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, extended_image=None,
-                 show_pic=False, show_line=False, show_word=False, show_char=False):
-        super().__init__(image, x_axis, y_axis, width, height, extended_image,
-                         show_pic, show_line, show_word, show_char)
+    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
+        super().__init__(image, x_axis, y_axis, width, height, to_show)
 
         if self.show_word:
             cv2.imshow("Word", image)

@@ -1,8 +1,8 @@
-import cv2
-
 from os.path import dirname, join
 
-from WLC.image_processing.extended_image import ExtendedImage
+import cv2
+
+from WLC.image_processing.extended_image import ToShow
 from WLC.image_processing.picture import Picture
 
 
@@ -45,8 +45,8 @@ class Camera:
         # ret, frame = cap.read()
 
         proj_path = dirname(dirname(dirname(__file__)))  # 3 dirs up. Change this if proj structure is modified.
-        input_path = join(proj_path, "input.jpg")
+        input_path = join(proj_path, "assets/basic/basic_1.jpg")
         img = cv2.imread(input_path)
         height, width, _ = img.shape
-        return Picture(img, 0, 0, width, height, show_pic=show_pic, show_line=show_line,
-                       show_word=show_word, show_char=show_character)
+        to_show = ToShow(show_pic, show_line, show_word, show_character)
+        return Picture(img, 0, 0, width, height, to_show)

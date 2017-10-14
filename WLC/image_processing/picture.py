@@ -6,10 +6,8 @@ from WLC.image_processing.line import Line
 
 
 class Picture(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, extended_image=None,
-                 show_pic=False, show_line=False, show_word=False, show_char=False):
-        super().__init__(image, x_axis, y_axis, width, height, extended_image,
-                         show_pic, show_line, show_word, show_char)
+    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
+        super().__init__(image, x_axis, y_axis, width, height, to_show)
         if self.show_pic:
             cv2.imshow("Full picture", image)
             cv2.waitKey(0)
@@ -58,7 +56,3 @@ class Picture(ExtendedImage):
         # TODO: Actually do something with the code
 
         return "\n".join(line.get_code() for line in lines)  # Note: joining on newlines
-
-# show images with:
-# cv2.imshow('file', img)
-# cv2.waitKey(0)

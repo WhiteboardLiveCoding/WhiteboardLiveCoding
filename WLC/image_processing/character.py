@@ -3,16 +3,13 @@ import cv2
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.ocr.ocr import OCR
 
-
 # the MNIST standard image size.
 STD_IMAGE_SIZE = 28
 
 
 class Character(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, extended_image=None,
-                 show_pic=False, show_line=False, show_word=False, show_char=False):
-        super().__init__(image, x_axis, y_axis, width, height, extended_image,
-                         show_pic, show_line, show_word, show_char)
+    def __init__(self, image, x_axis, y_axis, width, height, to_show):
+        super().__init__(image, x_axis, y_axis, width, height, to_show)
         self.ocr = OCR()
 
         if self.show_char:
@@ -20,7 +17,6 @@ class Character(ExtendedImage):
             cv2.waitKey(0)
 
     def get_code(self):
-        # TODO: plugin to Tensorflow/Keras
         img = self.transform_to_standard()
 
         return self.ocr.predict(img)
