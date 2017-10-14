@@ -37,6 +37,12 @@ class ExtendedImage:
     def get_y(self):
         return self._y_axis
 
+    def get_height(self):
+        return self._height
+
+    def get_width(self):
+        return self._width
+
     def get_code(self):
         raise NotImplementedError("get_code not implemented")
 
