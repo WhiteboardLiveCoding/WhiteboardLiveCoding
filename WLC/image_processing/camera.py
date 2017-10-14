@@ -1,5 +1,7 @@
 import cv2
 
+from os.path import dirname, join
+
 from WLC.image_processing.picture import Picture
 
 
@@ -41,6 +43,8 @@ class Camera:
         # cap = cv2.VideoCapture(camera_id)
         # ret, frame = cap.read()
 
-        img = cv2.imread('input.jpg')
+        proj_path = dirname(dirname(dirname(__file__)))  # 3 dirs up. Change this if proj structure is modified.
+        input_path = join(proj_path, "input.jpg")
+        img = cv2.imread(input_path)
         height, width, _ = img.shape
         return Picture(img, 0, 0, width, height)
