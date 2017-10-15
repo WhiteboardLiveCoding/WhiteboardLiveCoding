@@ -21,7 +21,7 @@ def arguments():
     show_character = args.characters
     debug_mode = args.debug
 
-    return show_pic, show_line, show_word, show_character, debug_mode
+    return show_pic, show_line, show_word, show_character
 
 
 def main(show_pic=False, show_line=False, show_word=False, show_character=False):
