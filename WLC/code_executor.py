@@ -10,7 +10,7 @@ class CodeExecutor:
         pass
 
     def execute_code(self, code):
-        LOGGER.info("Executing code: \n{}\n".format(code))
+        LOGGER.info("Executing code: \n%s\n", code)
 
         with io.StringIO() as code_out:
             sys.stdout = code_out
@@ -26,4 +26,4 @@ class CodeExecutor:
 
             s = code_out.getvalue()
 
-            LOGGER.info("Output:\n{}\n".format(s))
+            LOGGER.info("Output:\n%s\n", s)

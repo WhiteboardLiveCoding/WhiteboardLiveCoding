@@ -31,12 +31,12 @@ def arguments():
         LOGGER.setLevel(logging.DEBUG)
 
     LOGGER.debug("""Command line arguments parsed:
-    - show_pic: {}
-    - show_line: {}
-    - show_word: {}
-    - show_character: {}
-    - debug_mode: {}
-    """.format(show_pic, show_line, show_word, show_character, debug_mode))
+    - show_pic: %s
+    - show_line: %s
+    - show_word: %s
+    - show_character: %s
+    - debug_mode: %s
+    """, show_pic, show_line, show_word, show_character, debug_mode)
 
     return show_pic, show_line, show_word, show_character
 

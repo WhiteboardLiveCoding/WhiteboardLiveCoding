@@ -43,7 +43,7 @@ class Line(ExtendedImage):
             roi = self.get_image()[y:y + h, x:x + w]
             words.append(Word(roi, x, y, w, h, self))
 
-        LOGGER.debug("{} words detected in this line.".format(len(words)))
+        LOGGER.debug("%d words detected in this line.", len(words))
         return words
 
     def _merge_code(self, words):

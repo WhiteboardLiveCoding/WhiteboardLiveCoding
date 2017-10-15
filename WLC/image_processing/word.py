@@ -43,7 +43,7 @@ class Word(ExtendedImage):
                 characters.append(Character(roi, x_axis, y_axis, width, height, self))
                 previous_x = x_axis
 
-        LOGGER.debug("{} characters found in this word.".format(len(characters)))
+        LOGGER.debug("%d characters found in this word.", len(characters))
         return characters
 
     def _truncate_black_borders(self, img):

@@ -33,7 +33,7 @@ class Character(ExtendedImage):
         """
         img = self.transform_to_standard()
 
-        LOGGER.warning("Classifying hasnt been implemented yet!")
+        LOGGER.warning("Classifying hasn't been implemented yet!")
 
         # TODO: actually classify
 
