@@ -34,4 +34,5 @@ def run_benchmarks():
         benchmark_file('assets/examples/images/example_{}.png'.format(i))
 
 
-run_benchmarks()
+if __name__ == '__main__':
+    run_benchmarks()
