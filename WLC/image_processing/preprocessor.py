@@ -26,10 +26,10 @@ class Preprocessor:
 
         screen_cnt = None
         edges_found = False
-        for c in contours:
+        for cntour in contours:
             # approximate the contour
-            peri = cv2.arcLength(c, True)
-            approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+            peri = cv2.arcLength(cntour, True)
+            approx = cv2.approxPolyDP(cntour, 0.02 * peri, True)
 
             # Transform only if we can see 4 edges
             if len(approx) == 4:
@@ -69,9 +69,9 @@ class Preprocessor:
     def order_points(self, pts):
         rect = np.zeros((4, 2), dtype="float32")
 
-        s = pts.sum(axis=1)
-        rect[0] = pts[np.argmin(s)]
-        rect[2] = pts[np.argmax(s)]
+        sum_ = pts.sum(axis=1)
+        rect[0] = pts[np.argmin(sum_)]
+        rect[2] = pts[np.argmax(sum_)]
 
         diff = np.diff(pts, axis=1)
         rect[1] = pts[np.argmin(diff)]
@@ -81,14 +81,14 @@ class Preprocessor:
 
     def four_point_transform(self, image, pts):
         rect = self.order_points(pts)
-        (tl, tr, br, bl) = rect
+        (top_left, top_right, bottom_right, bottom_left) = rect
 
-        width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        width_a = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) + ((bottom_right[1] - bottom_left[1]) ** 2))
+        width_b = np.sqrt(((top_right[0] - top_left[0]) ** 2) + ((top_right[1] - top_left[1]) ** 2))
         max_width = max(int(width_a), int(width_b))
 
-        height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-        height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+        height_a = np.sqrt(((top_right[0] - bottom_right[0]) ** 2) + ((top_right[1] - bottom_right[1]) ** 2))
+        height_b = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) + ((top_left[1] - bottom_left[1]) ** 2))
         max_height = max(int(height_a), int(height_b))
 
         dst = np.array([
@@ -98,8 +98,8 @@ class Preprocessor:
             [0, max_height - 1]], dtype="float32")
 
         # compute the perspective transform matrix and then apply it
-        M = cv2.getPerspectiveTransform(rect, dst)
-        warped = cv2.warpPerspective(image, M, (max_width, max_height))
+        transform_matrix = cv2.getPerspectiveTransform(rect, dst)
+        warped = cv2.warpPerspective(image, transform_matrix, (max_width, max_height))
 
         # return the warped image
         return warped

@@ -24,9 +24,6 @@ class CodeExecutor:
 
         print("Error:\n{}\n".format(s))
 
-        s = code_out.getvalue()
+        code_res = code_out.getvalue()
 
-        print("Output:\n{}\n".format(s))
-
-        code_out.close()
-        code_err.close()
+        print("Output:\n{}\n".format(code_res))

@@ -28,14 +28,14 @@ class Picture(ExtendedImage):
 
         for i, ctr in enumerate(sorted_ctrs):
             # Get bounding box
-            x, y, w, h = cv2.boundingRect(ctr)
+            x_axis, y_axis, width, height = cv2.boundingRect(ctr)
 
-            roi = gray_image[y:y + h, x:x + w]
-            mask = self._get_mask(img, sorted_ctrs, i)[y:y + h, x:x + w]
+            roi = gray_image[y_axis:y_axis + height, x_axis:x_axis + width]
+            mask = self._get_mask(img, sorted_ctrs, i)[y_axis:y_axis + height, x_axis:x_axis + width]
 
             result = cv2.bitwise_and(roi, roi, mask=mask)
 
-            lines.append(Line(result, x, y, w, h, self))
+            lines.append(Line(result, x_axis, y_axis, width, height, self))
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())

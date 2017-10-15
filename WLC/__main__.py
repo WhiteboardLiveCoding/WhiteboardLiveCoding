@@ -40,7 +40,5 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False)
 
 
 if __name__ == '__main__':
-    show_pic, show_line, show_word, show_character, debug_mode = arguments()
     print("Welcome to Live Whiteboard Coding!")
-    # TODO: Start logger based on the debug_mode flag.
-    main(show_pic, show_line, show_word, show_character)
+    main(*arguments())

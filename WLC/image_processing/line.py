@@ -33,11 +33,11 @@ class Line(ExtendedImage):
 
         for i, ctr in enumerate(sorted_ctrs):
             # Get bounding box
-            x, y, w, h = cv2.boundingRect(ctr)
+            x_axis, y_axis, width, height = cv2.boundingRect(ctr)
 
             # Getting ROI
-            roi = self.get_image()[y:y + h, x:x + w]
-            words.append(Word(roi, x, y, w, h, self))
+            roi = self.get_image()[y_axis:y_axis + height, x_axis:x_axis + width]
+            words.append(Word(roi, x_axis, y_axis, width, height, self))
 
         return words
 
