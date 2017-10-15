@@ -1,3 +1,4 @@
+import logging
 import sys
 
 import cv2
@@ -5,6 +6,8 @@ import numpy as np
 
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.image_processing.line import Line
+
+LOGGER = logging.getLogger()
 
 
 class Picture(ExtendedImage):
@@ -18,6 +21,7 @@ class Picture(ExtendedImage):
 
     def get_code(self):
         lines = self._segment_image(self.get_image())
+        LOGGER.debug("Getting code for the {} lines detected.".format(len(lines)))
         return self._merge_code(lines)
 
     def _segment_image(self, gray_image):
@@ -39,7 +43,7 @@ class Picture(ExtendedImage):
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())
-
+        LOGGER.debug("{} lines detected.".format(len(lines)))
         return lines
 
     def _prepare_for_contouring(self, gray_image):
@@ -95,6 +99,7 @@ class Picture(ExtendedImage):
             else:
                 indentation = self._get_closest_indentation(line, indent_locations)
 
+                LOGGER.debug("Indentation of {} detected.".format(indentation))
                 if indentation is not None:
                     indent_locations[indentation].append(line.get_x())
                     indents.append(indentation)

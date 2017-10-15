@@ -1,3 +1,4 @@
+import logging
 from os.path import dirname, join
 
 import cv2
@@ -5,6 +6,7 @@ import cv2
 from WLC.image_processing.extended_image import ToShow
 from WLC.image_processing.picture import Picture
 
+LOGGER = logging.getLogger()
 
 class Camera:
     _camera_id = None
@@ -38,7 +40,9 @@ class Camera:
         self._camera_id = camera_id
         return camera_id
 
-    def capture(self, show_pic, show_line, show_word, show_character):
+    def capture(self, show_pic=False, show_line=False, show_word=False, show_character=False):
+        LOGGER.debug("Capturing image")
+
         # camera_id = self._get_device()
 
         # cap = cv2.VideoCapture(camera_id)

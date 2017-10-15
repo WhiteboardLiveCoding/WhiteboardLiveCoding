@@ -1,9 +1,12 @@
+import logging
+
 import cv2
-import numpy as np
 import sys
 
 from WLC.image_processing.character import Character
 from WLC.image_processing.extended_image import ExtendedImage
+
+LOGGER = logging.getLogger()
 
 
 class Word(ExtendedImage):
@@ -25,7 +28,7 @@ class Word(ExtendedImage):
         # sort contours
         sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
-        words = list()
+        characters = list()
         previous_x = sys.maxsize
 
         for i, ctr in enumerate(sorted_ctrs):
@@ -37,10 +40,11 @@ class Word(ExtendedImage):
                 min_y, max_y = self._truncate_black_borders(roi)
                 roi = roi[min_y:max_y]
 
-                words.append(Character(roi, x_axis, y_axis, width, height, self))
+                characters.append(Character(roi, x_axis, y_axis, width, height, self))
                 previous_x = x_axis
 
-        return words
+        LOGGER.debug("{} characters found in this word.".format(len(characters)))
+        return characters
 
     def _truncate_black_borders(self, img):
         results = list(map(lambda row: sum(row), img))

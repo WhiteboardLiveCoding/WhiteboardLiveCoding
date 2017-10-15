@@ -1,8 +1,14 @@
 import argparse
+import logging
 
 from WLC.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
+
+FORMAT = '%(levelname)-10s %(message)s'
+
+logging.basicConfig(format=FORMAT)
+LOGGER = logging.getLogger()
 
 
 def arguments():
@@ -21,26 +27,37 @@ def arguments():
     show_character = args.characters
     debug_mode = args.debug
 
-    return show_pic, show_line, show_word, show_character, debug_mode
+    if debug_mode:
+        LOGGER.setLevel(logging.DEBUG)
+
+    LOGGER.debug("""Command line arguments parsed:
+    - show_pic: {}
+    - show_line: {}
+    - show_word: {}
+    - show_character: {}
+    - debug_mode: {}
+    """.format(show_pic, show_line, show_word, show_character, debug_mode))
+
+    return show_pic, show_line, show_word, show_character
 
 
 def main(show_pic=False, show_line=False, show_word=False, show_character=False):
-    print("Acquiring Image")
+    LOGGER.info("Acquiring Image")
     picture = Camera().capture(show_pic, show_line, show_word, show_character)
 
-    print("Preprocessing Image")
+    LOGGER.info("Preprocessing Image")
     image = Preprocessor().process(picture)
 
-    print("Obtaining code")
+    LOGGER.info("Obtaining code")
     code = image.get_code().lower()
 
     CodeExecutor().execute_code(code)
 
-    print("Complete!")
+    LOGGER.info("Complete!")
 
 
 if __name__ == '__main__':
-    show_pic, show_line, show_word, show_character, debug_mode = arguments()
-    print("Welcome to Live Whiteboard Coding!")
-    # TODO: Start logger based on the debug_mode flag.
+    LOGGER.setLevel(logging.INFO)
+    show_pic, show_line, show_word, show_character = arguments()
+    LOGGER.info("Welcome to Live Whiteboard Coding!")
     main(show_pic, show_line, show_word, show_character)
