@@ -73,8 +73,9 @@ class ExtendedImage:
 
 
 class Preferences:
-    def __init__(self, show_pic=False, show_line=False, show_word=False, show_char=False):
+    def __init__(self, show_pic=False, show_line=False, show_word=False, show_char=False, annotate=False):
         self.show_pic = show_pic
         self.show_line = show_line
         self.show_word = show_word
         self.show_char = show_char
+        self.annotate = annotate

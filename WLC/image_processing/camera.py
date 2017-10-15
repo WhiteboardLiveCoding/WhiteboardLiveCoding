@@ -51,12 +51,12 @@ class Camera:
         height, width, _ = img.shape
         return Picture(img, 0, 0, width, height, to_show)
 
-    def capture(self, show_pic=False, show_line=False, show_word=False, show_character=False):
+    def capture(self, show_pic=False, show_line=False, show_word=False, show_character=False, annotate=False):
         LOGGER.debug("Capturing image")
         # camera_id = self._get_device()
 
         # cap = cv2.VideoCapture(camera_id)
         # ret, frame = cap.read()
 
-        to_show = Preferences(show_pic, show_line, show_word, show_character)
+        to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
         return self.read_file("assets/examples/images/example_1.png", to_show)
