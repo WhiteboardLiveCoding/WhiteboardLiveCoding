@@ -1,7 +1,11 @@
+import logging
+
 import cv2
 import imutils
 import numpy as np
 from skimage.filters import threshold_adaptive
+
+LOGGER = logging.getLogger()
 
 
 class Preprocessor:
@@ -9,6 +13,7 @@ class Preprocessor:
         pass
 
     def process(self, extended_image):
+        LOGGER.debug("Processing image")
         image = extended_image.get_image()
 
         ratio = image.shape[0] / 500.0
@@ -35,9 +40,11 @@ class Preprocessor:
             if len(approx) == 4:
                 screen_cnt = approx
                 edges_found = True
+                LOGGER.debug("Edges found!")
                 break
 
         if edges_found:
+            LOGGER.debug("Reshaping image to get top-down view")
             # get top-down view of image
             warped = self.four_point_transform(orig, screen_cnt.reshape(4, 2) * ratio)
 

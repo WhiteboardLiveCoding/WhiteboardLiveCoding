@@ -1,5 +1,8 @@
 import io
+import logging
 import sys
+
+LOGGER = logging.getLogger()
 
 
 class CodeExecutor:
@@ -7,23 +10,20 @@ class CodeExecutor:
         pass
 
     def execute_code(self, code):
-        print("Executing code: \n{}\n".format(code))
+        LOGGER.info("Executing code: \n%s\n", code)
 
-        code_out = io.StringIO()
-        code_err = io.StringIO()
+        with io.StringIO() as code_out:
+            sys.stdout = code_out
 
-        sys.stdout = code_out
-        sys.stderr = code_err
+            try:
+                exec(code)
+            except:
+                LOGGER.exception("An error was raised!")
+            else:
+                LOGGER.info("No errors occurred.")
 
-        exec(code)
+            sys.stdout = sys.__stdout__
 
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
+            s = code_out.getvalue()
 
-        s = code_err.getvalue()
-
-        print("Error:\n{}\n".format(s))
-
-        code_res = code_out.getvalue()
-
-        print("Output:\n{}\n".format(code_res))
+            LOGGER.info("Output:\n%s\n", s)

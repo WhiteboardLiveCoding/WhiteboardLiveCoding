@@ -1,3 +1,4 @@
+import logging
 from math import floor, ceil
 
 import cv2
@@ -7,6 +8,7 @@ from WLC.ocr.ocr import OCR
 
 # the MNIST standard image size.
 STD_IMAGE_SIZE = 28
+LOGGER = logging.getLogger()
 
 
 class Character(ExtendedImage):
@@ -31,6 +33,8 @@ class Character(ExtendedImage):
         """
         img = self.transform_to_standard()
 
+        LOGGER.warning("Classifying hasn't been implemented yet!")
+
         # TODO: actually classify
 
     def transform_to_standard(self):
@@ -38,6 +42,7 @@ class Character(ExtendedImage):
         The image should be transformed into standard width and height (eg. 28px - the MNIST standard size). This is
         done so that we can use neural networks to figure out the letter
         """
+        LOGGER.debug("Resizing character to fit to standard.")
         img = self._resize()
 
         # cv2.imshow('resized', img)
