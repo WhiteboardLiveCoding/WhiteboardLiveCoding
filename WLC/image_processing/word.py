@@ -1,6 +1,6 @@
-import cv2
-import numpy as np
 import sys
+
+import cv2
 
 from WLC.image_processing.character import Character
 from WLC.image_processing.extended_image import ExtendedImage

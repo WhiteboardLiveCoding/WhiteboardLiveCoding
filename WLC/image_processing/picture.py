@@ -122,9 +122,9 @@ class Picture(ExtendedImage):
         distance = sys.maxsize
         indentation = None
 
-        for i in range(len(indent_locations)):
-            if abs(np.mean(indent_locations[i]) - line.get_x()) < distance:
-                distance = abs(np.mean(indent_locations[i]) - line.get_x())
-                indentation = i
+        for idx, indent in enumerate(indent_locations):
+            if abs(np.mean(indent) - line.get_x()) < distance:
+                distance = abs(np.mean(indent) - line.get_x())
+                indentation = idx
 
         return indentation
