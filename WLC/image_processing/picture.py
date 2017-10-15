@@ -1,3 +1,4 @@
+import logging
 import sys
 
 import cv2
@@ -5,6 +6,8 @@ import numpy as np
 
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.image_processing.line import Line
+
+LOGGER = logging.getLogger()
 
 
 class Picture(ExtendedImage):
@@ -18,6 +21,7 @@ class Picture(ExtendedImage):
 
     def get_code(self):
         lines = self._segment_image(self.get_image())
+        LOGGER.debug("Getting code for the %d lines detected.", len(lines))
         return self._merge_code(lines)
 
     def _segment_image(self, gray_image):
@@ -39,7 +43,7 @@ class Picture(ExtendedImage):
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())
-
+        LOGGER.debug("%d lines detected.", len(lines))
         return lines
 
     def _prepare_for_contouring(self, gray_image):
@@ -85,22 +89,26 @@ class Picture(ExtendedImage):
         indents.append(0)
         indent_locations.append([lines[0].get_x()])
 
-        for line in lines[1:]:
+        for line_n, line in enumerate(lines):
             if self._is_before_first_indent(line, indent_locations):
                 indent_locations[0].append(line.get_x())
-                indents.append(0)
+                indentation = 0
+
             elif self._is_after_last_indent(line, indent_locations):
                 indent_locations.append([line.get_x()])
-                indents.append(len(indent_locations) - 1)
+                indentation = len(indent_locations) - 1
+
             else:
                 indentation = self._get_closest_indentation(line, indent_locations)
 
                 if indentation is not None:
                     indent_locations[indentation].append(line.get_x())
-                    indents.append(indentation)
+
                 else:
                     raise ValueError("Could not determine indentation")
 
+            LOGGER.debug("Indentation of %d detected on line %d.", indentation, line_n)
+            indents.append(indentation)
         return indents
 
     def _is_before_first_indent(self, line, indent_locations):

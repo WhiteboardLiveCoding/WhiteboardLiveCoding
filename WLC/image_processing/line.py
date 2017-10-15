@@ -1,8 +1,12 @@
+import logging
+
 import cv2
 import numpy as np
 
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.image_processing.word import Word
+
+LOGGER = logging.getLogger()
 
 
 class Line(ExtendedImage):
@@ -39,6 +43,7 @@ class Line(ExtendedImage):
             roi = self.get_image()[y:y + h, x:x + w]
             words.append(Word(roi, x, y, w, h, self))
 
+        LOGGER.debug("%d words detected in this line.", len(words))
         return words
 
     def _merge_code(self, words):

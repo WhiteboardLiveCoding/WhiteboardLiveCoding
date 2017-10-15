@@ -1,5 +1,9 @@
+import logging
+
 import cv2
 import numpy as np
+
+LOGGER = logging.getLogger()
 
 
 class ExtendedImage:
@@ -47,6 +51,7 @@ class ExtendedImage:
         return self._width
 
     def get_code(self):
+        """Get the code from the current image. This may require recursively checking child elements."""
         raise NotImplementedError("get_code not implemented")
 
     def _fix_rotation(self):
@@ -70,12 +75,12 @@ class ExtendedImage:
         img = cv2.copyMakeBorder(img, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=[0, 0, 0])
 
         # Calculate center, the pivot point of rotation
-        (h, w) = img.shape[:2]
-        center = (w // 2, h // 2)
+        (height, width) = img.shape[:2]
+        center = (width // 2, height // 2)
 
         # Rotate
-        M = cv2.getRotationMatrix2D(center, angle, 1.0)
-        return cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        return cv2.warpAffine(img, rot_matrix, (width, height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
 
 class ToShow:
