@@ -1,0 +1,5 @@
+class Foo:
+    def bar(self):
+        pass
+foo = Foo()
+foo.bar()

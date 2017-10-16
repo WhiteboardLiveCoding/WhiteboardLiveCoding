@@ -1,3 +1,4 @@
+editdistance
 opencv-python
 numpy
 imutils
