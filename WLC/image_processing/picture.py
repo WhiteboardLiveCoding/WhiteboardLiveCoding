@@ -90,7 +90,7 @@ class Picture(ExtendedImage):
         indents.append(0)
         indent_locations.append([lines[0].get_x()])
 
-        for line_n, line in enumerate(lines):
+        for line_n, line in enumerate(lines[1:]):
             if self._is_before_first_indent(line, indent_locations):
                 indent_locations[0].append(line.get_x())
                 indentation = 0
