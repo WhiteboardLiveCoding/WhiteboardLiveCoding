@@ -13,9 +13,10 @@ LOGGER = logging.getLogger()
 class Picture(ExtendedImage):
     INDENTATION_THRESHOLD = 50
 
-    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
-        super().__init__(image, x_axis, y_axis, width, height, to_show)
-        if self.show_pic:
+    def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
+        super().__init__(image, x_axis, y_axis, width, height, preferences)
+
+        if self.preferences.show_pic:
             cv2.imshow("Full picture", image)
             cv2.waitKey(0)
 
@@ -39,7 +40,7 @@ class Picture(ExtendedImage):
 
             result = cv2.bitwise_and(roi, roi, mask=mask)
 
-            lines.append(Line(result, x_axis, y_axis, width, height, self))
+            lines.append(Line(result, x_axis, y_axis, width, height, self.preferences))
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())

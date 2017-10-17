@@ -10,11 +10,11 @@ LOGGER = logging.getLogger()
 
 
 class Line(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
-        super().__init__(image, x_axis, y_axis, width, height, to_show)
+    def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
+        super().__init__(image, x_axis, y_axis, width, height, preferences)
         self._fix_rotation()
 
-        if self.show_line:
+        if self.preferences.show_line:
             cv2.imshow("Line", self.get_image())
             cv2.waitKey(0)
 
@@ -41,7 +41,7 @@ class Line(ExtendedImage):
 
             # Getting ROI
             roi = self.get_image()[y_axis:y_axis + height, x_axis:x_axis + width]
-            words.append(Word(roi, x_axis, y_axis, width, height, self))
+            words.append(Word(roi, x_axis, y_axis, width, height, self.preferences))
 
         LOGGER.debug("%d words detected in this line.", len(words))
         return words
