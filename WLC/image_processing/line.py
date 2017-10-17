@@ -60,10 +60,11 @@ class Line(ExtendedImage):
 
             prev_word = word_list[-1] if word_list else None
 
-            code = word.get_code(contextual_data, prev_word)
+            context = prev_word in ["def", "class", "="]
+            code = word.get_code(contextual_data, context)
 
             if prev_word == "class" or prev_word == "def":
-                contextual_data.append(code)
+                contextual_data.append(code.split("(")[0])  # split on "(" to lose the args on a function
                 # print("adding {} to context data as prev was {}".format(code, prev_word))
 
             if prev_word == "=":

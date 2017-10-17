@@ -10,7 +10,7 @@ from WLC.image_processing.extended_image import ExtendedImage
 
 LOGGER = logging.getLogger()
 
-KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "assert", "main"]
+KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "assert", "main", "range"]
 
 
 class Word(ExtendedImage):
@@ -58,7 +58,7 @@ class Word(ExtendedImage):
 
         return min_y, len(results)-max_y
 
-    def _merge_code(self, characters, contextual_data=None, prev_context=None):
+    def _merge_code(self, characters, contextual_data=None, prev_context=False):
         """
         Merges all of the words into a line of code
         """
@@ -69,25 +69,26 @@ class Word(ExtendedImage):
 
         start = 0
         end = 0
+        l_dist = 10  # max change is 2 anyway
         curr_best_match = None
         curr_best_word = None
 
         if not prev_context:
-            for kw in KW_LIST + contextual_data:
+            for kw in contextual_data + KW_LIST:
                 pos = find_near_matches(kw, word, max_l_dist=min(2, len(kw) - 1), max_insertions=0, max_deletions=0)
-
                 for p in pos or []:
                     if p.start == 0:
-                        # start = pos[0].start  # always 0
-                        if end < p.end:
+                        # If word is longer, or if theres less l_dist (prioritising contextual_data)
+                        if end < p.end or (end == p.end and p.dist < l_dist and not (curr_best_word in contextual_data and kw in KW_LIST)):
                             end = p.end
                             curr_best_match = p
                             curr_best_word = kw
+                            l_dist = p.dist
                             # print(curr_best_word)
 
             if curr_best_match and curr_best_word:
                 new_word = word[:start] + curr_best_word + word[end:]
-                # print("Replace {} with {}".format(word, new_word))
+                # print("Replace {} with {} by inserting {}".format(word, new_word, curr_best_word))
                 word = new_word
 
         return word
