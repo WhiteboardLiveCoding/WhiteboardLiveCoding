@@ -39,8 +39,6 @@ class Character(ExtendedImage):
 
         # TODO: actually classify
 
-        pass
-
     def transform_to_standard(self):
         """
         The image should be transformed into standard width and height (eg. 28px - the MNIST standard size). This is

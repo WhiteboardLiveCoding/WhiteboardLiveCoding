@@ -1,7 +1,7 @@
 import logging
+import sys
 
 import cv2
-import sys
 
 from WLC.image_processing.character import Character
 from WLC.image_processing.extended_image import ExtendedImage

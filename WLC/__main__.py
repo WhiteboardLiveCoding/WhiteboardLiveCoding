@@ -58,6 +58,6 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False)
 
 if __name__ == '__main__':
     LOGGER.setLevel(logging.INFO)
-    show_pic, show_line, show_word, show_character = arguments()
     LOGGER.info("Welcome to Live Whiteboard Coding!")
+    show_pic, show_line, show_word, show_character = arguments()
     main(show_pic, show_line, show_word, show_character)
