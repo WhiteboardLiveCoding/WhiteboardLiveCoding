@@ -31,10 +31,10 @@ class Preprocessor:
 
         screen_cnt = None
         edges_found = False
-        for cntour in contours:
+        for contour in contours:
             # approximate the contour
-            peri = cv2.arcLength(cntour, True)
-            approx = cv2.approxPolyDP(cntour, 0.02 * peri, True)
+            peri = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
 
             # Transform only if we can see 4 edges
             if len(approx) == 4:
