@@ -27,8 +27,12 @@ def benchmark_file(file_name):
     image = Preprocessor().process(picture)
     code = image.get_code().lower()
     difference = editdistance.eval("".join(code.split()), "".join(expected_code.split()))
-    accuracy = round(100 - (difference * 100 / len(expected_code)))
+
+    length = len("".join(expected_code.split()))
+    accuracy = round(100 - (difference * 100 / length))
+
     LOGGER.info('Accuracy: {}%, File: {}'.format(accuracy, file_name))
+    return accuracy, length
 
 
 def run_benchmarks():
@@ -36,9 +40,21 @@ def run_benchmarks():
     LOGGER.info('Uses Levenshtein distance to calculate the difference and then uses that to calculate accuracy.')
     LOGGER.info('')
 
-    for i in range(1, 6):
-        benchmark_file('assets/examples/images/example_{}.png'.format(i))
+    total_accuracy = 0
+    total_length = 0
 
+    for i in range(1, 6):
+        accuracy, length = benchmark_file('assets/examples/images/example_{}.png'.format(i))
+        total_accuracy += accuracy * length
+        total_length += length
+
+    overall_accuracy = round(total_accuracy / total_length)
+
+    LOGGER.info('')
+    LOGGER.info('Overall Accuracy: {}%'.format(overall_accuracy))
+    LOGGER.info('Code length: {}'.format(total_length))
+
+    return overall_accuracy
 
 if __name__ == '__main__':
     LOGGER.setLevel(logging.INFO)
