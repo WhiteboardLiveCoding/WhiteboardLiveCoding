@@ -18,9 +18,9 @@ class Line(ExtendedImage):
             cv2.imshow("Line", self.get_image())
             cv2.waitKey(0)
 
-    def get_code(self):
+    def get_code(self, contextual_data=None):
         words = self._segment_image()
-        return self._merge_code(words)
+        return self._merge_code(words, contextual_data)
 
     def _segment_image(self):
         # dilation
@@ -46,9 +46,29 @@ class Line(ExtendedImage):
         LOGGER.debug("%d words detected in this line.", len(words))
         return words
 
-    def _merge_code(self, words):
+    def _merge_code(self, words, contextual_data=None):
         """
         Merges all of the words into a line of code
         """
         # TODO: Actually do something with the code
-        return " ".join(word.get_code() for word in words)  # TODO: join on more than just spaces?
+        if not contextual_data:
+            contextual_data = []
+
+        # line = ""
+        word_list = []
+        for word in words:
+
+            prev_word = word_list[-1] if word_list else None
+
+            code = word.get_code(contextual_data, prev_word)
+
+            if prev_word == "class" or prev_word == "def":
+                contextual_data.append(code)
+                # print("adding {} to context data as prev was {}".format(code, prev_word))
+
+            if prev_word == "=":
+                contextual_data.append(word_list[-2] if len(word_list) > 2 else None)
+
+            word_list.append(code)
+
+        return " ".join(word_list), contextual_data

@@ -21,7 +21,7 @@ class Picture(ExtendedImage):
             cv2.imshow("Full picture", image)
             cv2.waitKey(0)
 
-    def get_code(self):
+    def get_code(self, contextual_data=None):
         lines = self._segment_image(self.get_image())
         LOGGER.debug("Getting code for the %d lines detected.", len(lines))
         return self._merge_code(lines)
@@ -85,9 +85,15 @@ class Picture(ExtendedImage):
         Should return a string with the code from all of the lines, this function will also have to figure out how far
         each line is indented.
         """
-        indent = self._determine_indentation(lines)
-        return "\n".join("{indent}{code}".format(indent="  " * indent, code=line.get_code())
-                         for indent, line in zip(indent, lines))
+        indents = self._determine_indentation(lines)
+
+        line_list = []
+        context = None
+        for indent, line in zip(indents, lines):
+            code, context = line.get_code(context)
+            line_list.append("{indent}{code}".format(indent="  " * indent, code=code))
+
+        return "\n".join(line_list)
 
     def _determine_indentation(self, lines):
         """

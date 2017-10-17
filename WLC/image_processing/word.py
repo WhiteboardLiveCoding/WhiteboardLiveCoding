@@ -21,9 +21,9 @@ class Word(ExtendedImage):
             cv2.imshow("Word", image)
             cv2.waitKey(0)
 
-    def get_code(self):
+    def get_code(self, contextual_data=None, prev_context=None):
         characters = self._segment_image()
-        return self._merge_code(characters)
+        return self._merge_code(characters, contextual_data, prev_context)
 
     def _segment_image(self):
         # find contours
@@ -58,11 +58,13 @@ class Word(ExtendedImage):
 
         return min_y, len(results)-max_y
 
-    def _merge_code(self, characters):
+    def _merge_code(self, characters, contextual_data=None, prev_context=None):
         """
         Merges all of the words into a line of code
         """
-        # TODO: Actually do something with the code
+        if not contextual_data:
+            contextual_data = []
+
         word = "".join(character.get_code().lower() for character in characters)
 
         start = 0
@@ -70,20 +72,22 @@ class Word(ExtendedImage):
         curr_best_match = None
         curr_best_word = None
 
-        for kw in KW_LIST:
-            pos = find_near_matches(kw, word, max_l_dist=min(2, len(kw) - 1), max_insertions=0, max_deletions=0)
+        if not prev_context:
+            for kw in KW_LIST + contextual_data:
+                pos = find_near_matches(kw, word, max_l_dist=min(2, len(kw) - 1), max_insertions=0, max_deletions=0)
 
-            for p in pos or []:
-                if p.start == 0:
-                    # start = pos[0].start  # always 0
-                    if end < p.end:
-                        end = p.end
-                        curr_best_match = p
-                        curr_best_word = kw
-                        # print(curr_best_word)
+                for p in pos or []:
+                    if p.start == 0:
+                        # start = pos[0].start  # always 0
+                        if end < p.end:
+                            end = p.end
+                            curr_best_match = p
+                            curr_best_word = kw
+                            # print(curr_best_word)
 
-        if curr_best_match and curr_best_word:
-            new_word = word[:start] + curr_best_word + word[end:]
-            # print("Replace {} with {}".format(word, new_word))
-            word = new_word
+            if curr_best_match and curr_best_word:
+                new_word = word[:start] + curr_best_word + word[end:]
+                # print("Replace {} with {}".format(word, new_word))
+                word = new_word
+
         return word

@@ -25,7 +25,11 @@ class Character(ExtendedImage):
         self.ocr = OCR()
         self._fix_rotation()
 
-    def get_code(self):
+        if self.preferences and self.preferences.show_char:
+            cv2.imshow("Character", image)
+            cv2.waitKey(0)
+
+    def get_code(self, contextual_data=None):
         img = self.transform_to_standard()
 
         return self.ocr.predict(img)
