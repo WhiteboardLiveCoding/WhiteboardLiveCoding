@@ -1,0 +1,1 @@
+FORMAT = '%(levelname)-10s %(message)s'

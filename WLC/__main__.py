@@ -4,8 +4,7 @@ import logging
 from WLC.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
-
-FORMAT = '%(levelname)-10s %(message)s'
+from WLC.utils.formatting import FORMAT
 
 logging.basicConfig(format=FORMAT)
 LOGGER = logging.getLogger()

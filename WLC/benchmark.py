@@ -1,12 +1,12 @@
 import logging
 import re
 
-from WLC.__main__ import FORMAT
-
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
 
 import editdistance
+
+from WLC.utils.formatting import FORMAT
 
 logging.basicConfig(format=FORMAT)
 LOGGER = logging.getLogger()
