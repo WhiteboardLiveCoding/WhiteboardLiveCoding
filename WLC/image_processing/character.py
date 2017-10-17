@@ -13,12 +13,12 @@ LOGGER = logging.getLogger()
 
 
 class Character(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, to_show):
-        super().__init__(image, x_axis, y_axis, width, height, to_show)
+    def __init__(self, image, x_axis, y_axis, width, height, preferences):
+        super().__init__(image, x_axis, y_axis, width, height, preferences)
         self.ocr = OCR()
         self._fix_rotation()
 
-        if self.show_char:
+        if self.preferences.show_char:
             cv2.imshow("Character", image)
             cv2.waitKey(0)
 
@@ -38,8 +38,6 @@ class Character(ExtendedImage):
         LOGGER.warning("Classifying hasn't been implemented yet!")
 
         # TODO: actually classify
-
-        pass
 
     def transform_to_standard(self):
         """
@@ -70,7 +68,7 @@ class Character(ExtendedImage):
         res = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
         res = cv2.resize(res, (STD_IMAGE_SIZE, STD_IMAGE_SIZE))
 
-        if self.show_char:
+        if self.preferences.show_char:
             # cv2.imshow("Original Character", img)
             cv2.imshow("Resized Character", res)
             cv2.waitKey(0)

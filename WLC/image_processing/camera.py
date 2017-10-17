@@ -3,10 +3,11 @@ from os.path import dirname, join
 
 import cv2
 
-from WLC.image_processing.extended_image import ToShow
+from WLC.image_processing.extended_image import Preferences
 from WLC.image_processing.picture import Picture
 
 LOGGER = logging.getLogger()
+
 
 class Camera:
     _camera_id = None
@@ -57,5 +58,5 @@ class Camera:
         # cap = cv2.VideoCapture(camera_id)
         # ret, frame = cap.read()
 
-        to_show = ToShow(show_pic, show_line, show_word, show_character)
+        to_show = Preferences(show_pic, show_line, show_word, show_character)
         return self.read_file("assets/examples/images/example_1.png", to_show)

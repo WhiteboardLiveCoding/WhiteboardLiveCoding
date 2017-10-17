@@ -13,9 +13,10 @@ LOGGER = logging.getLogger()
 class Picture(ExtendedImage):
     INDENTATION_THRESHOLD = 50
 
-    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
-        super().__init__(image, x_axis, y_axis, width, height, to_show)
-        if self.show_pic:
+    def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
+        super().__init__(image, x_axis, y_axis, width, height, preferences)
+
+        if self.preferences.show_pic:
             cv2.imshow("Full picture", image)
             cv2.waitKey(0)
 
@@ -32,14 +33,14 @@ class Picture(ExtendedImage):
 
         for i, ctr in enumerate(sorted_ctrs):
             # Get bounding box
-            x, y, w, h = cv2.boundingRect(ctr)
+            x_axis, y_axis, width, height = cv2.boundingRect(ctr)
 
-            roi = gray_image[y:y + h, x:x + w]
-            mask = self._get_mask(img, sorted_ctrs, i)[y:y + h, x:x + w]
+            roi = gray_image[y_axis:y_axis + height, x_axis:x_axis + width]
+            mask = self._get_mask(img, sorted_ctrs, i)[y_axis:y_axis + height, x_axis:x_axis + width]
 
             result = cv2.bitwise_and(roi, roi, mask=mask)
 
-            lines.append(Line(result, x, y, w, h, self))
+            lines.append(Line(result, x_axis, y_axis, width, height, self.preferences))
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())
@@ -130,9 +131,9 @@ class Picture(ExtendedImage):
         distance = sys.maxsize
         indentation = None
 
-        for i in range(len(indent_locations)):
-            if abs(np.mean(indent_locations[i]) - line.get_x()) < distance:
-                distance = abs(np.mean(indent_locations[i]) - line.get_x())
-                indentation = i
+        for idx, indent in enumerate(indent_locations):
+            if abs(np.mean(indent) - line.get_x()) < distance:
+                distance = abs(np.mean(indent) - line.get_x())
+                indentation = idx
 
         return indentation

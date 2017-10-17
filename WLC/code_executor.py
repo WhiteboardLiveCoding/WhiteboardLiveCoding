@@ -1,6 +1,6 @@
+import io
 import logging
 import sys
-import io
 
 LOGGER = logging.getLogger()
 

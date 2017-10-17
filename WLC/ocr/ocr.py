@@ -1,9 +1,10 @@
-import numpy as np
 import pickle
-
 from os import environ
 from os.path import dirname, join
+
+import numpy as np
 from keras.models import model_from_yaml
+
 from WLC.utils.singleton import Singleton
 
 # Mute tensorflow debugging information on console
