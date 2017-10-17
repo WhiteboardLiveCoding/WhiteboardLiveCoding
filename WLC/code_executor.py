@@ -9,7 +9,7 @@ class CodeExecutor:
     def __init__(self):
         pass
 
-    def execute_code(self, code):
+    def execute_code(self, code, docker_ip):
         LOGGER.info("Executing code: \n%s\n", code)
 
         with io.StringIO() as code_out:

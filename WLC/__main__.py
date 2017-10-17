@@ -19,6 +19,7 @@ def arguments():
     parser.add_argument("-w", "--words", action="store_true", default=False, help="Show words")
     parser.add_argument("-c", "--characters", action="store_true", default=False, help="Show characters")
     parser.add_argument("-d", "--debug", action="store_true", default=False, help="Run in debug mode")
+    parser.add_argument("-ip", "--dockerip", help="Docker daemon IP")
 
     args, unknown = parser.parse_known_args()
     show_pic = args.pics
@@ -26,6 +27,7 @@ def arguments():
     show_word = args.words
     show_character = args.characters
     debug_mode = args.debug
+    docker_ip = args.dockerip
 
     if debug_mode:
         LOGGER.setLevel(logging.DEBUG)
@@ -36,12 +38,13 @@ def arguments():
     - show_word: %s
     - show_character: %s
     - debug_mode: %s
-    """, show_pic, show_line, show_word, show_character, debug_mode)
+    - docker_ip: %s
+    """, show_pic, show_line, show_word, show_character, debug_mode, docker_ip)
 
-    return show_pic, show_line, show_word, show_character
+    return show_pic, show_line, show_word, show_character, docker_ip
 
 
-def main(show_pic=False, show_line=False, show_word=False, show_character=False):
+def main(show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip=""):
     LOGGER.info("Acquiring Image")
     picture = Camera().capture(show_pic, show_line, show_word, show_character)
 
@@ -51,7 +54,7 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False)
     LOGGER.info("Obtaining code")
     code = image.get_code().lower()
 
-    CodeExecutor().execute_code(code)
+    CodeExecutor().execute_code(code, docker_ip)
 
     LOGGER.info("Complete!")
 
@@ -59,5 +62,5 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False)
 if __name__ == '__main__':
     LOGGER.setLevel(logging.INFO)
     LOGGER.info("Welcome to Live Whiteboard Coding!")
-    show_pic, show_line, show_word, show_character = arguments()
-    main(show_pic, show_line, show_word, show_character)
+    show_pic, show_line, show_word, show_character, docker_ip = arguments()
+    main(show_pic, show_line, show_word, show_character, docker_ip)
