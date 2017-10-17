@@ -35,4 +35,9 @@ class CodeExecutor:
         client = docker.DockerClient(base_url="tcp://{}:2375".format(docker_ip))
         LOGGER.info("\n\n  # Docker Version running on server: %s\n", client.version()["Version"])
 
-        client.containers.run('python', 'python -c \"{}\"'.format(code))
+        container = client.containers.run('python', 'python -c \"{}\"'.format(code), detach=True)
+        container.wait()
+
+        LOGGER.info("\n\n # Container stdout contents: \n%s\n", container.logs(stdout=True))
+
+        LOGGER.info("\n\n # Container stderr contents: \n%s\n", container.logs(stderr=True))
