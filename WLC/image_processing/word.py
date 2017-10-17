@@ -1,12 +1,16 @@
+import keyword
 import logging
 import sys
 
 import cv2
+from fuzzysearch import find_near_matches
 
 from WLC.image_processing.character import Character
 from WLC.image_processing.extended_image import ExtendedImage
 
 LOGGER = logging.getLogger()
+
+KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "assert", "main"]
 
 
 class Word(ExtendedImage):
@@ -59,4 +63,27 @@ class Word(ExtendedImage):
         Merges all of the words into a line of code
         """
         # TODO: Actually do something with the code
-        return "".join(character.get_code() for character in characters)
+        word = "".join(character.get_code().lower() for character in characters)
+
+        start = 0
+        end = 0
+        curr_best_match = None
+        curr_best_word = None
+
+        for kw in KW_LIST:
+            pos = find_near_matches(kw, word, max_l_dist=min(2, len(kw) - 1), max_insertions=0, max_deletions=0)
+
+            for p in pos or []:
+                if p.start == 0:
+                    # start = pos[0].start  # always 0
+                    if end < p.end:
+                        end = p.end
+                        curr_best_match = p
+                        curr_best_word = kw
+                        # print(curr_best_word)
+
+        if curr_best_match and curr_best_word:
+            new_word = word[:start] + curr_best_word + word[end:]
+            # print("Replace {} with {}".format(word, new_word))
+            word = new_word
+        return word
