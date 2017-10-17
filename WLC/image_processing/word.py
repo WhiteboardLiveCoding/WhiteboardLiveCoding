@@ -10,10 +10,10 @@ LOGGER = logging.getLogger()
 
 
 class Word(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, to_show=None):
-        super().__init__(image, x_axis, y_axis, width, height, to_show)
+    def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
+        super().__init__(image, x_axis, y_axis, width, height, preferences)
 
-        if self.show_word:
+        if self.preferences.show_word:
             cv2.imshow("Word", image)
             cv2.waitKey(0)
 
@@ -40,7 +40,7 @@ class Word(ExtendedImage):
                 min_y, max_y = self._truncate_black_borders(roi)
                 roi = roi[min_y:max_y]
 
-                characters.append(Character(roi, x_axis, y_axis, width, height, self))
+                characters.append(Character(roi, x_axis, y_axis, width, height, self.preferences))
                 previous_x = x_axis
 
         LOGGER.debug("%d characters found in this word.", len(characters))
