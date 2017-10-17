@@ -2,6 +2,7 @@ import logging
 from math import floor, ceil
 
 import cv2
+import numpy as np
 
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.ocr.ocr import OCR
@@ -15,6 +16,7 @@ class Character(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, to_show):
         super().__init__(image, x_axis, y_axis, width, height, to_show)
         self.ocr = OCR()
+        self._fix_rotation()
 
         if self.show_char:
             cv2.imshow("Character", image)

@@ -1,0 +1,4 @@
+def test(k):
+  for K in range(k):
+    print(K)
+test(10)
