@@ -16,7 +16,7 @@ class Picture(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
 
-        if self.preferences.show_pic:
+        if self.preferences and self.preferences.show_pic:
             cv2.imshow("Full picture", image)
             cv2.waitKey(0)
 

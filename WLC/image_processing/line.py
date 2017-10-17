@@ -14,7 +14,7 @@ class Line(ExtendedImage):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
         self._fix_rotation()
 
-        if self.preferences.show_line:
+        if self.preferences and self.preferences.show_line:
             cv2.imshow("Line", self.get_image())
             cv2.waitKey(0)
 

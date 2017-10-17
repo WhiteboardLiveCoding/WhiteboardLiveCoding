@@ -18,7 +18,7 @@ class Character(ExtendedImage):
         self.ocr = OCR()
         self._fix_rotation()
 
-        if self.preferences.show_char:
+        if self.preferences and self.preferences.show_char:
             cv2.imshow("Character", image)
             cv2.waitKey(0)
 
@@ -68,7 +68,7 @@ class Character(ExtendedImage):
         res = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
         res = cv2.resize(res, (STD_IMAGE_SIZE, STD_IMAGE_SIZE))
 
-        if self.preferences.show_char:
+        if self.preferences and self.preferences.show_char:
             # cv2.imshow("Original Character", img)
             cv2.imshow("Resized Character", res)
             cv2.waitKey(0)
