@@ -4,8 +4,7 @@ import logging
 from WLC.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
-
-FORMAT = '%(levelname)-10s %(message)s'
+from WLC.utils.formatting import FORMAT
 
 logging.basicConfig(format=FORMAT)
 LOGGER = logging.getLogger()
@@ -19,6 +18,7 @@ def arguments():
     parser.add_argument("-w", "--words", action="store_true", default=False, help="Show words")
     parser.add_argument("-c", "--characters", action="store_true", default=False, help="Show characters")
     parser.add_argument("-d", "--debug", action="store_true", default=False, help="Run in debug mode")
+    parser.add_argument("-a", "--annotate", action="store_true", default=False, help="Ask user to annotate images")
 
     args, unknown = parser.parse_known_args()
     show_pic = args.pics
@@ -26,6 +26,7 @@ def arguments():
     show_word = args.words
     show_character = args.characters
     debug_mode = args.debug
+    annotate = args.annotate
 
     if debug_mode:
         LOGGER.setLevel(logging.DEBUG)
@@ -36,14 +37,15 @@ def arguments():
     - show_word: %s
     - show_character: %s
     - debug_mode: %s
-    """, show_pic, show_line, show_word, show_character, debug_mode)
+    - annotate: %s
+    """, show_pic, show_line, show_word, show_character, debug_mode, annotate)
 
-    return show_pic, show_line, show_word, show_character
+    return show_pic, show_line, show_word, show_character, annotate
 
 
-def main(show_pic=False, show_line=False, show_word=False, show_character=False):
+def main(show_pic=False, show_line=False, show_word=False, show_character=False, annotate=False):
     LOGGER.info("Acquiring Image")
-    picture = Camera().capture(show_pic, show_line, show_word, show_character)
+    picture = Camera().capture(show_pic, show_line, show_word, show_character, annotate)
 
     LOGGER.info("Preprocessing Image")
     image = Preprocessor().process(picture)
@@ -59,5 +61,5 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False)
 if __name__ == '__main__':
     LOGGER.setLevel(logging.INFO)
     LOGGER.info("Welcome to Live Whiteboard Coding!")
-    show_pic, show_line, show_word, show_character = arguments()
-    main(show_pic, show_line, show_word, show_character)
+    show_pic, show_line, show_word, show_character, annotate = arguments()
+    main(show_pic, show_line, show_word, show_character, annotate)
