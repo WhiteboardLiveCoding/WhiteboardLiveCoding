@@ -12,6 +12,7 @@ LOGGER = logging.getLogger()
 
 class Picture(ExtendedImage):
     INDENTATION_THRESHOLD = 50
+    ARTIFACT_PERCENTAGE_THRESHOLD = 0.08
 
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
@@ -31,10 +32,19 @@ class Picture(ExtendedImage):
 
         lines = list()
 
+        # Get average height and width of all lines
+        average_width = sum(cv2.boundingRect(ctr)[2] for i, ctr in enumerate(sorted_ctrs)) / len(sorted_ctrs)
+        average_height = sum(cv2.boundingRect(ctr)[3] for i, ctr in enumerate(sorted_ctrs)) / len(sorted_ctrs)
+
         for i, ctr in enumerate(sorted_ctrs):
             # Get bounding box
             x_axis, y_axis, width, height = cv2.boundingRect(ctr)
 
+            # Discard lines which have a very small width or height (based on the threshold)
+            if width < (average_width * self.ARTIFACT_PERCENTAGE_THRESHOLD) or \
+               height < (average_height * self.ARTIFACT_PERCENTAGE_THRESHOLD):
+                continue
+          
             roi = gray_image[y_axis:y_axis + height, x_axis:x_axis + width]
             mask = self._get_mask(img, sorted_ctrs, i)[y_axis:y_axis + height, x_axis:x_axis + width]
 
