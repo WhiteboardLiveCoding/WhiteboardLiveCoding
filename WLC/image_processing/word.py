@@ -10,7 +10,7 @@ from WLC.image_processing.extended_image import ExtendedImage
 
 LOGGER = logging.getLogger()
 
-KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "assert", "main", "range"]
+KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "assert", "range"]
 
 
 class Word(ExtendedImage):
@@ -21,7 +21,7 @@ class Word(ExtendedImage):
             cv2.imshow("Word", image)
             cv2.waitKey(0)
 
-    def get_code(self, contextual_data=None, prev_context=None):
+    def get_code(self, contextual_data=None, prev_context=False):
         characters = self._segment_image()
         return self._merge_code(characters, contextual_data, prev_context)
 
@@ -61,6 +61,11 @@ class Word(ExtendedImage):
     def _merge_code(self, characters, contextual_data=None, prev_context=False):
         """
         Merges all of the words into a line of code
+
+        :param characters: List of characters to parse
+        :param contextual_data: Contextual data - eg class names, assignments, or function names
+        :param prev_context: whether there is a previous context
+        :return:
         """
         if not contextual_data:
             contextual_data = []
@@ -73,7 +78,12 @@ class Word(ExtendedImage):
         curr_best_match = None
         curr_best_word = None
 
-        if not prev_context:
+        if prev_context == "import":  # no numbers -> replace possibly similar matches.
+            word = word.replace("0", "o")
+            word = word.replace("6", "s")
+            word = word.replace("5", "s")
+
+        elif not prev_context:
             for kw in contextual_data + KW_LIST:
                 pos = find_near_matches(kw, word, max_l_dist=min(2, len(kw) - 1), max_insertions=0, max_deletions=0)
                 for p in pos or []:
@@ -84,11 +94,9 @@ class Word(ExtendedImage):
                             curr_best_match = p
                             curr_best_word = kw
                             l_dist = p.dist
-                            # print(curr_best_word)
 
             if curr_best_match and curr_best_word:
                 new_word = word[:start] + curr_best_word + word[end:]
-                # print("Replace {} with {} by inserting {}".format(word, new_word, curr_best_word))
                 word = new_word
 
         return word

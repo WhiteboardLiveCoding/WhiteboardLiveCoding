@@ -50,26 +50,30 @@ class Line(ExtendedImage):
         """
         Merges all of the words into a line of code
         """
-        # TODO: Actually do something with the code
         if not contextual_data:
             contextual_data = []
 
         # line = ""
         word_list = []
         for word in words:
-
             prev_word = word_list[-1] if word_list else None
 
-            context = prev_word in ["def", "class", "="]
-            code = word.get_code(contextual_data, context)
+            prev_context = prev_word if prev_word in ["def", "class", "=", "import"] else False
+            code = word.get_code(contextual_data, prev_context)
 
             if prev_word == "class" or prev_word == "def":
                 contextual_data.append(code.split("(")[0])  # split on "(" to lose the args on a function
-                # print("adding {} to context data as prev was {}".format(code, prev_word))
 
             if prev_word == "=":
                 contextual_data.append(word_list[-2] if len(word_list) > 2 else None)
 
             word_list.append(code)
 
-        return " ".join(word_list), contextual_data
+        line = " ".join(word_list)
+
+        # If any of these, I expect it to end with a colon
+        # NOTE: this is currently hardcoding; not interesting.
+        # if any(line.startswith(b) for b in ["class", "def", "if", "for"]):
+        #     line = line[:-1] + ":"
+
+        return line, contextual_data
