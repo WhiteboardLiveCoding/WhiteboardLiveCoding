@@ -45,6 +45,8 @@ def arguments():
 
 
 def main(show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip=""):
+    CodeExecutor().connect_sandbox(docker_ip)
+
     LOGGER.info("Acquiring Image")
     picture = Camera().capture(show_pic, show_line, show_word, show_character)
 
@@ -54,7 +56,7 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False,
     LOGGER.info("Obtaining code")
     code = image.get_code().lower()
 
-    CodeExecutor().execute_code(code, docker_ip)
+    CodeExecutor().execute_code(code)
 
     LOGGER.info("Complete!")
 
