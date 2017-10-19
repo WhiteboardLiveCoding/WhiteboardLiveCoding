@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from WLC.code_executor import CodeExecutor
+from WLC.code_executor import CodeExecutor, DEFAULT_DOCKER_PORT
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
 
@@ -45,7 +45,7 @@ def arguments():
 
 
 def main(show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip=""):
-    CodeExecutor().connect_sandbox(docker_ip)
+    executor = CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT)
 
     LOGGER.info("Acquiring Image")
     picture = Camera().capture(show_pic, show_line, show_word, show_character)
@@ -56,7 +56,7 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False,
     LOGGER.info("Obtaining code")
     code = image.get_code().lower()
 
-    CodeExecutor().execute_code(code)
+    executor.execute_code(code)
 
     LOGGER.info("Complete!")
 

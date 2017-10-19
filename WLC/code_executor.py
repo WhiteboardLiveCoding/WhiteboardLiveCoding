@@ -5,28 +5,21 @@ import docker
 
 LOGGER = logging.getLogger()
 
-DEFAULT_DOCKER_PORT = 2375
+DEFAULT_DOCKER_PORT = "2375"
 
 
 class CodeExecutor:
-    def __init__(self, docker_ip=None):
-        self.docker_ip = docker_ip
-        self.docker_port = DEFAULT_DOCKER_PORT
-        self.client = None
-
-    def connect_sandbox(self, docker_ip):
-        if docker_ip:
-            # save the address
-            self.docker_ip = docker_ip
-
-            # attempt TCP connection
-            self.client = docker.DockerClient(base_url="tcp://{}:{}".format(self.docker_ip, self.docker_port))
-            LOGGER.info("Docker Version running on server: %s\n", self.client.version()["Version"])
+    def __init__(self, ip="", port=""):
+        if ip and port:
+            self.client = docker.DockerClient(base_url="tcp://{}:{}".format(ip, port))
+            self.force_local = False
+        else:
+            self.force_local = True
 
     def execute_code(self, code):
         LOGGER.info("Executing code: \n%s\n", code)
 
-        if not self.docker_ip:
+        if self.force_local:
             self.execute_local(code)
         else:
             self.execute_sandbox(code)
@@ -49,12 +42,8 @@ class CodeExecutor:
             LOGGER.info("Output:\n%s\n", s)
 
     def execute_sandbox(self, code):
-        client = docker.DockerClient(base_url="tcp://{}:2375".format(self.docker_ip))
-        LOGGER.info("\n\n  # Docker Version running on server: %s\n", client.version()["Version"])
-
-        container = client.containers.run('python', 'python -c \"{}\"'.format(code), detach=True)
+        LOGGER.info("Executing in sandbox...\n")
+        container = self.client.containers.run('python', 'python -c \"{}\"'.format(code), detach=True)
         container.wait()
 
-        LOGGER.info("\n\n # Container stdout contents: \n%s\n", container.logs(stdout=True))
-
-        LOGGER.info("\n\n # Container stderr contents: \n%s\n", container.logs(stderr=True))
+        LOGGER.info("\n\n # Container output: \n%s\n", container.logs(stdout=True))
