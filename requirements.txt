@@ -7,4 +7,5 @@ scipy
 tensorflow
 keras
 h5py
+docker
 pytest
