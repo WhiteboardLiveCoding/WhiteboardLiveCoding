@@ -32,6 +32,8 @@ class Picture(ExtendedImage):
 
         lines = list()
 
+        sorted_ctrs = self._merge_subcontours(sorted_ctrs)
+
         # Get average height and width of all lines
         average_width = sum(cv2.boundingRect(ctr)[2] for i, ctr in enumerate(sorted_ctrs)) / len(sorted_ctrs)
         average_height = sum(cv2.boundingRect(ctr)[3] for i, ctr in enumerate(sorted_ctrs)) / len(sorted_ctrs)
@@ -147,3 +149,27 @@ class Picture(ExtendedImage):
                 indentation = idx
 
         return indentation
+
+    def _merge_subcontours(self, sorted_ctrs):
+        merged = list()
+        for i, ctr in enumerate(sorted_ctrs):
+            x1, y1, width1, height1 = cv2.boundingRect(ctr)
+
+            remove = None
+            add = True
+
+            for merged_ctr in merged:
+                x2, y2, width2, height2 = cv2.boundingRect(merged_ctr)
+
+                if x1 <= x2 and y1 <= y2 and x1 + width1 >= x2 + width2 and y1 + height1 >= y2 + height2:
+                    merged.append(np.concatenate((ctr, merged_ctr), axis=0))
+                    remove = merged_ctr
+                    add = False
+                    break
+
+            if add:
+                merged.append(ctr)
+            else:
+                merged = [x for x in merged if x.shape != remove.shape or not np.equal(x, remove).all()]
+
+        return merged
