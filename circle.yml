@@ -1,0 +1,7 @@
+machine:
+  python:
+    version: 3.6.2
+
+test:
+  override:
+    - pytest WLC/tests.py

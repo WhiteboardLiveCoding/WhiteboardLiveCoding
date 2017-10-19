@@ -1,8 +1,12 @@
+import filecmp
 import logging
+import os
 from math import floor, ceil
 
 import cv2
-import numpy as np
+from os.path import isfile, join, dirname
+
+import re
 
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.ocr.ocr import OCR
@@ -11,33 +15,57 @@ from WLC.ocr.ocr import OCR
 STD_IMAGE_SIZE = 28
 LOGGER = logging.getLogger()
 
+LOWEST_ALLOWED_CHAR = 33
+HIGHEST_ALLOWED_CHAR = 126
+
 
 class Character(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, to_show):
-        super().__init__(image, x_axis, y_axis, width, height, to_show)
+    def __init__(self, image, x_axis, y_axis, width, height, preferences):
+        super().__init__(image, x_axis, y_axis, width, height, preferences)
         self.ocr = OCR()
         self._fix_rotation()
-
-        if self.show_char:
-            cv2.imshow("Character", image)
-            cv2.waitKey(0)
 
     def get_code(self):
         img = self.transform_to_standard()
 
         return self.ocr.predict(img)
 
-    def classify(self):
+    def _annotate(self, res):
         """
         This will show the image on the screen and ask the user to enter the character which is shown, this image will
         be then saved to a directory with the name of the character. Later these saved images will be used for training
         the neural network. The image should be first transformed to standard.
         """
-        img = self.transform_to_standard()
+        cv2.imshow("Character", res)
+        dec = cv2.waitKey(0)
 
-        LOGGER.warning("Classifying hasn't been implemented yet!")
+        if LOWEST_ALLOWED_CHAR <= dec <= HIGHEST_ALLOWED_CHAR:
+            proj_path = dirname(dirname(dirname(__file__)))  # 3 dirs up. Change this if proj structure is modified.
+            directory = join(proj_path, 'assets/characters/{}'.format(dec))
 
-        # TODO: actually classify
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+            files = [f for f in os.listdir(directory) if isfile(join(directory, f))]
+
+            temp = '{}/temp.png'.format(directory)
+            cv2.imwrite(temp, res)
+
+            exists = False
+            for file in files:
+                if filecmp.cmp(temp, '{}/{}'.format(directory, file)):
+                    exists = True
+
+            if exists:
+                os.remove(temp)
+            else:
+                if files:
+                    max_file = max(list(map(lambda x: self.extract_file_number(x, '.png'), files)))
+                else:
+                    max_file = 0
+
+                name = '{}/{}.png'.format(directory, str(max_file + 1))
+                os.rename(temp, name)
 
     def transform_to_standard(self):
         """
@@ -45,12 +73,15 @@ class Character(ExtendedImage):
         done so that we can use neural networks to figure out the letter
         """
         LOGGER.debug("Resizing character to fit to standard.")
-        img = self._resize()
+        res = self._resize()
 
         # cv2.imshow('resized', img)
         # cv2.waitKey(0)
 
-        return img
+        if self.preferences and self.preferences.annotate:
+            self._annotate(res)
+
+        return res
 
     def _resize(self):
         """
@@ -68,9 +99,16 @@ class Character(ExtendedImage):
         res = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
         res = cv2.resize(res, (STD_IMAGE_SIZE, STD_IMAGE_SIZE))
 
-        if self.show_char:
+        if self.preferences and self.preferences.show_char:
             # cv2.imshow("Original Character", img)
             cv2.imshow("Resized Character", res)
             cv2.waitKey(0)
 
         return res
+
+    def extract_file_number(self, file_name, suffix):
+        s = re.findall("\d+{}$".format(suffix), file_name)
+        if s:
+            return int(s[0].replace(suffix, ''))
+        else:
+            return 0

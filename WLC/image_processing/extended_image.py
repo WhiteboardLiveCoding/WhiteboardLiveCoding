@@ -9,25 +9,14 @@ LOGGER = logging.getLogger()
 class ExtendedImage:
     MAX_ROTATE = 20
 
-    def __init__(self, image, x_axis, y_axis, width, height, to_show):
+    def __init__(self, image, x_axis, y_axis, width, height, preferences):
         self._image = image
         self._x_axis = x_axis
         self._y_axis = y_axis
         self._width = width
         self._height = height
 
-        if to_show:
-            self.show_pic = to_show.show_pic
-            self.show_line = to_show.show_line
-            self.show_word = to_show.show_word
-            self.show_char = to_show.show_char
-        else:
-            self.show_pic = False
-            self.show_line = False
-            self.show_word = False
-            self.show_char = False
-
-        self.to_show = to_show  # for passing to others
+        self.preferences = preferences  # for passing to others
 
     def save(self, name):
         cv2.imwrite(name, self._image)
@@ -83,9 +72,10 @@ class ExtendedImage:
         return cv2.warpAffine(img, rot_matrix, (width, height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
 
-class ToShow:
-    def __init__(self, show_pic=False, show_line=False, show_word=False, show_char=False):
+class Preferences:
+    def __init__(self, show_pic=False, show_line=False, show_word=False, show_char=False, annotate=False):
         self.show_pic = show_pic
         self.show_line = show_line
         self.show_word = show_word
         self.show_char = show_char
+        self.annotate = annotate
