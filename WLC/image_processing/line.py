@@ -62,7 +62,14 @@ class Line(ExtendedImage):
             code = word.get_code(contextual_data, prev_context)
 
             if prev_word == "class" or prev_word == "def":
-                contextual_data.append(code.split(":")[0].split("(")[0])  # split on "(" to lose the args on a function
+
+                if "(" in code:
+                    name = code[:code.find("(")]
+                    contextual_data.append(name)
+
+                if "(" in code and ")" in code:
+                    args = code[code.find("(") + 1:code.rfind(")")]
+                    # TODO: contextual data check on args
 
             if prev_word == "=":
                 contextual_data.append(word_list[-2] if len(word_list) > 2 else None)
