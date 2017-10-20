@@ -29,10 +29,10 @@ class Character(ExtendedImage):
             cv2.imshow("Character", image)
             cv2.waitKey(0)
 
-    def get_code(self, contextual_data=None):
+    def get_code(self, contextual_data=None, get_letters=False):
         img = self.transform_to_standard()
 
-        return self.ocr.predict(img)
+        return self.ocr.predict(img, get_letters=get_letters)
 
     def _annotate(self, res):
         """

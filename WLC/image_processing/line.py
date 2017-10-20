@@ -62,7 +62,7 @@ class Line(ExtendedImage):
             code = word.get_code(contextual_data, prev_context)
 
             if prev_word == "class" or prev_word == "def":
-                contextual_data.append(code.split("(")[0])  # split on "(" to lose the args on a function
+                contextual_data.append(code.split(":")[0].split("(")[0])  # split on "(" to lose the args on a function
 
             if prev_word == "=":
                 contextual_data.append(word_list[-2] if len(word_list) > 2 else None)
@@ -73,7 +73,7 @@ class Line(ExtendedImage):
 
         # If any of these, I expect it to end with a colon
         # NOTE: this is currently hardcoding; not interesting.
-        # if any(line.startswith(b) for b in ["class", "def", "if", "for"]):
+        # if any(line.startswith(b) for b in ["class", "def", "if", "for"]) and line.endswith("i"):
         #     line = line[:-1] + ":"
 
         return line, contextual_data
