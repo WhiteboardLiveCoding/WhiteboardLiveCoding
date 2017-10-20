@@ -51,7 +51,8 @@ class Camera:
         height, width, _ = img.shape
         return Picture(img, 0, 0, width, height, to_show)
 
-    def capture(self, show_pic=False, show_line=False, show_word=False, show_character=False, annotate=False):
+    def capture(self, show_pic=False, show_line=False, show_word=False, show_character=False, image_path="",
+                annotate=False):
         LOGGER.debug("Capturing image")
         # camera_id = self._get_device()
 
@@ -59,4 +60,8 @@ class Camera:
         # ret, frame = cap.read()
 
         to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
-        return self.read_file("assets/examples/images/example_1.png", to_show)
+
+        if not image_path:
+            raise Exception("No image path specified")
+
+        return self.read_file(image_path, to_show)

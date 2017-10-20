@@ -1,14 +1,13 @@
 import argparse
 import logging
 
-from WLC.code_executor import CodeExecutor, DEFAULT_DOCKER_PORT
 from WLC.image_processing.camera import Camera
-from WLC.image_processing.preprocessor import Preprocessor
 from WLC.utils.formatting import FORMAT
+from WLC.utils.gui import Gui
+from tkinter import *
 
 logging.basicConfig(format=FORMAT)
 LOGGER = logging.getLogger()
-
 
 def arguments():
     parser = argparse.ArgumentParser()
@@ -47,20 +46,22 @@ def arguments():
 
 
 def main(show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip="", annotate=False):
-    executor = CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT)
+    LOGGER.info("Setting up GUI of the application")
+    root = Tk()
+    root.geometry("1200x1000")
+    app = Gui(root)
 
     LOGGER.info("Acquiring Image")
-    picture = Camera().capture(show_pic, show_line, show_word, show_character, annotate)
+    picture_path = app.get_picture()
+    picture = Camera().capture(show_pic, show_line, show_word, show_character, picture_path, annotate)
+    app.save_picture(picture)
+    app.save_docker_ip(docker_ip)
+    app.display_picture(picture_path)
 
-    LOGGER.info("Preprocessing Image")
-    image = Preprocessor().process(picture)
+    LOGGER.info("Image loaded, waiting for execute click")
+    app.init_button()
 
-    LOGGER.info("Obtaining code")
-    code = image.get_code().lower()
-
-    executor.execute_code(code)
-
-    LOGGER.info("Complete!")
+    app.mainloop()
 
 
 if __name__ == '__main__':
