@@ -5,7 +5,6 @@ import numpy as np
 
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.image_processing.word import Word
-from WLC.code_fixing.context import line_context_analysis
 
 
 LOGGER = logging.getLogger()

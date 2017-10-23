@@ -77,8 +77,8 @@ class CodeFixer:
                     args = new_word[new_word.find("(") + 1:new_word.rfind(")")]
                     # TODO: contextual data check on args
 
-            if prev_word == "=":
-                contextual_data.append(fixed_words[-2] if len(fixed_words) > 2 else None)
+            if prev_word == "=" and len(fixed_words) > 2:
+                    contextual_data.append(fixed_words[-2])  # add var name before = sign to contextual data
 
             fixed_words.append(new_word)
 
