@@ -63,8 +63,8 @@ def line_context_analysis(words, contextual_data=None):
                 args = code[code.find("(") + 1:code.rfind(")")]
                 # TODO: contextual data check on args
 
-        if prev_word == "=":
-            contextual_data.append(word_list[-2] if len(word_list) > 2 else None)
+        if prev_word == "=" and len(word_list) > 2:
+                contextual_data.append(word_list[-2])  # Add the word before the = sign to contextual data
 
         word_list.append(code)
 
