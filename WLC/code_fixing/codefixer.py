@@ -54,7 +54,8 @@ class CodeFixer:
             contextual_data = []
 
         if prev_word == "import" or next_word == "=":
-            contextual_data.append(word)  # add the imported module, or the var name to contextual data
+            if word and word not in contextual_data:
+                contextual_data.append(word)  # add the imported module, or the var name to contextual data
             return word, contextual_data
 
         elif not prev_word:
@@ -71,7 +72,7 @@ class CodeFixer:
         fixed_words = []
         words = line.split()
         for idx, word in enumerate(words):
-            prev_word = fixed_words[-1] if fixed_words and fixed_words[-1] in ["def", "class", "=", "import"] else None
+            prev_word = fixed_words[-1] if fixed_words and fixed_words[-1] in ["def", "class", "import"] else None
             next_word = words[idx + 1] if len(words) > idx + 1 else None
 
             fixed_word, contextual_data = self._fix_word(word, idx, line_number, contextual_data=contextual_data,
@@ -82,7 +83,7 @@ class CodeFixer:
 
                 if "(" in fixed_word:
                     name = fixed_word[:fixed_word.find("(")]
-                    if name not in contextual_data:
+                    if name and name not in contextual_data:
                         contextual_data.append(name)
 
                 if "(" in fixed_word and ")" in fixed_word:
@@ -116,7 +117,7 @@ class CodeFixer:
 
             if prev_word == "=" and len(fixed_words) > 2:  # shouldve already been caught but sanity check
                 var_name = fixed_words[-2]
-                if var_name not in contextual_data:
+                if var_name and var_name not in contextual_data:
                     contextual_data.append(var_name)  # add var name before = sign to contextual data
 
             fixed_words.append(fixed_word)
