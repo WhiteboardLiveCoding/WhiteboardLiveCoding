@@ -18,9 +18,9 @@ class Word(ExtendedImage):
             cv2.imshow("Word", image)
             cv2.waitKey(0)
 
-    def get_code(self, contextual_data=None, prev_context=False):
+    def get_code(self):
         characters = self._segment_image()
-        return self._merge_code(characters, contextual_data, prev_context)
+        return self._merge_code(characters)
 
     def _segment_image(self):
         # find contours
@@ -55,14 +55,12 @@ class Word(ExtendedImage):
 
         return min_y, len(results)-max_y
 
-    def _merge_code(self, characters, contextual_data=None, prev_context=False):
+    def _merge_code(self, characters):
         """
         Merges all of the words into a line of code
 
         :param characters: List of characters to parse
-        :param contextual_data: Contextual data - eg class names, assignments, or function names
-        :param prev_context: whether there is a previous context
         :return:
         """
 
-        return word_context_analysis(characters, contextual_data, prev_context)
+        return "".join(char.get_code() for char in characters)
