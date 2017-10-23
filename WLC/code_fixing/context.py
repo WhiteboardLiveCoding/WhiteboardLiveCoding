@@ -39,3 +39,40 @@ def word_context_analysis(characters, contextual_data=None, prev_context=False):
             word = new_word
 
     return word
+
+
+def line_context_analysis(words, contextual_data=None):
+    if not contextual_data:
+        contextual_data = []
+
+    # line = ""
+    word_list = []
+    for word in words:
+        prev_word = word_list[-1] if word_list else None
+
+        prev_context = prev_word if prev_word in ["def", "class", "=", "import"] else False
+        code = word.get_code(contextual_data, prev_context)
+
+        if prev_word == "class" or prev_word == "def":
+
+            if "(" in code:
+                name = code[:code.find("(")]
+                contextual_data.append(name)
+
+            if "(" in code and ")" in code:
+                args = code[code.find("(") + 1:code.rfind(")")]
+                # TODO: contextual data check on args
+
+        if prev_word == "=":
+            contextual_data.append(word_list[-2] if len(word_list) > 2 else None)
+
+        word_list.append(code)
+
+    line = " ".join(word_list)
+
+    # If any of these, I expect it to end with a colon
+    # NOTE: this is currently hardcoding; not interesting.
+    # if any(line.startswith(b) for b in ["class", "def", "if", "for"]) and line.endswith("i"):
+    #     line = line[:-1] + ":"
+
+    return line, contextual_data
