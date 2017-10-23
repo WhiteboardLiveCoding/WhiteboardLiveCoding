@@ -62,6 +62,6 @@ class Camera:
         to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
 
         if not image_path:
-            raise Exception("No image path specified")
+            image_path = 'assets/examples/images/example_1.png'
 
         return self.read_file(image_path, to_show)
