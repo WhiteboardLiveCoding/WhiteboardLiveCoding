@@ -60,7 +60,7 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False,
     code, indents, poss_lines = image.get_code()  # TODO: use poss_lines variations to fix code
     code = code.lower()
 
-    fixed_code = CodeFixer(code, indents).fix()
+    fixed_code = CodeFixer(code, indents, poss_lines).fix()
 
     executor.execute_code(fixed_code)
 
