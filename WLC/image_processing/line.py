@@ -5,7 +5,6 @@ import numpy as np
 
 from WLC.image_processing.extended_image import ExtendedImage
 from WLC.image_processing.word import Word
-from WLC.code_fixing.context import line_context_analysis
 
 
 LOGGER = logging.getLogger()
@@ -20,9 +19,9 @@ class Line(ExtendedImage):
             cv2.imshow("Line", self.get_image())
             cv2.waitKey(0)
 
-    def get_code(self, contextual_data=None):
+    def get_code(self, ):
         words = self._segment_image()
-        return self._merge_code(words, contextual_data)
+        return self._merge_code(words)
 
     def _segment_image(self):
         # dilation
@@ -56,8 +55,17 @@ class Line(ExtendedImage):
         LOGGER.debug("%d words detected in this line.", len(words))
         return words
 
-    def _merge_code(self, words, contextual_data=None):
+    def _merge_code(self, words):
         """
         Merges all of the words into a line of code
         """
-        return line_context_analysis(words, contextual_data)
+
+        coded_words = []
+        word_variances = {}
+        for idx, word in enumerate(words):
+            code_word, poss_chars = word.get_code()
+
+            word_variances[idx] = poss_chars
+            coded_words.append(code_word)
+
+        return " ".join(coded_words), word_variances

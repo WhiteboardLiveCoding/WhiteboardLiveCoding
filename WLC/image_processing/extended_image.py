@@ -39,7 +39,7 @@ class ExtendedImage:
     def get_width(self):
         return self._width
 
-    def get_code(self, contextual_data=None):
+    def get_code(self):
         """Get the code from the current image. This may require recursively checking child elements."""
         raise NotImplementedError("get_code not implemented")
 

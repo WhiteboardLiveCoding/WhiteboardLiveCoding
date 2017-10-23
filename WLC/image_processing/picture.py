@@ -21,7 +21,7 @@ class Picture(ExtendedImage):
             cv2.imshow("Full picture", image)
             cv2.waitKey(0)
 
-    def get_code(self, contextual_data=None):
+    def get_code(self):
         lines = self._segment_image(self.get_image())
         LOGGER.debug("Getting code for the %d lines detected.", len(lines))
         return self._merge_code(lines)
@@ -87,13 +87,15 @@ class Picture(ExtendedImage):
         """
         indents = self._determine_indentation(lines)
 
-        line_list = []
-        context = None
-        for indent, line in zip(indents, lines):
-            code, context = line.get_code(context)
-            line_list.append("{indent}{code}".format(indent="  " * indent, code=code))
+        coded_lines = []
+        lines_variations = {}
+        for idx, (indent, line) in enumerate(zip(indents, lines)):
+            code_line, poss_words = line.get_code()
 
-        return "\n".join(line_list)
+            lines_variations[idx] = poss_words
+            coded_lines.append("{indent}{code}".format(indent="  " * indent, code=code_line))
+
+        return "\n".join(coded_lines), indents, lines_variations
 
     def _determine_indentation(self, lines):
         """

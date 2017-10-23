@@ -2,6 +2,7 @@ import argparse
 import logging
 
 from WLC.code_executor import CodeExecutor, DEFAULT_DOCKER_PORT
+from WLC.code_fixing.codefixer import CodeFixer
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
 from WLC.utils.formatting import FORMAT
@@ -56,9 +57,12 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False,
     image = Preprocessor().process(picture)
 
     LOGGER.info("Obtaining code")
-    code = image.get_code().lower()
+    code, indents, poss_lines = image.get_code()  # TODO: use poss_lines variations to fix code
+    code = code.lower()
 
-    executor.execute_code(code)
+    fixed_code = CodeFixer(code, indents).fix()
+
+    executor.execute_code(fixed_code)
 
     LOGGER.info("Complete!")
 
