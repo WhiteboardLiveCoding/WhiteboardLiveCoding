@@ -13,24 +13,29 @@ class CodeFixer:
     def fix(self):
         fixed_lines = []
         contextual_data = []
-        for line in self.code.splitlines():
+        lines = self.code.splitlines()
+
+        # Iterate over all "root" elements to create scope, not actually changing the lines yet
+        for indent, line in zip(self.indents, lines):
+            if indent == 0:
+                _, contextual_data = self._fix_line(line, contextual_data)
+
+        for line in lines:
             new_line, contextual_data = self._fix_line(line, contextual_data)
             fixed_lines.append(new_line)
 
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
-    def _fix_word(self, word, contextual_data=None, prev_context=""):
+    def _fix_word(self, word, contextual_data=None, prev_word="", next_word=""):
         if contextual_data is None:
             contextual_data = []
 
-        if prev_context == "import":  # no numbers -> replace possibly similar matches.
-            # word = "".join(character.get_code(get_letters=True).lower() for character in characters)
-            # TODO: convert ints to chars by looking at predictions
-            contextual_data.append(word)  # add the imported module to contextual
+        if prev_word == "import" or next_word == "=":
+            contextual_data.append(word)  # add the imported module, or the var name to contextual data
             return word, contextual_data
 
-        elif not prev_context:
+        elif not prev_word:
             start = 0
             end = 0
             l_dist = 10  # max change is 2 anyway
@@ -61,24 +66,30 @@ class CodeFixer:
             contextual_data = []
 
         fixed_words = []
-        for word in line.split():
-            prev_word = fixed_words[-1] if fixed_words else None
+        words = line.split()
+        for idx, word in enumerate(words):
+            prev_word = fixed_words[-1] if fixed_words and fixed_words[-1] in ["def", "class", "=", "import"] else None
+            next_word = words[idx+1] if len(words) > idx + 1 else None
 
-            prev_context = prev_word if prev_word in ["def", "class", "=", "import"] else False
-            new_word, contextual_data = self._fix_word(word, contextual_data, prev_context)
+            new_word, contextual_data = self._fix_word(word, contextual_data=contextual_data,
+                                                       prev_word=prev_word, next_word=next_word)
 
             if prev_word == "class" or prev_word == "def":
 
                 if "(" in new_word:
                     name = new_word[:new_word.find("(")]
-                    contextual_data.append(name)
+                    if name not in contextual_data:
+                        contextual_data.append(name)
 
                 if "(" in new_word and ")" in new_word:
                     args = new_word[new_word.find("(") + 1:new_word.rfind(")")]
                     # TODO: contextual data check on args
+                    # if not similar to var names -> probably numbers
 
-            if prev_word == "=" and len(fixed_words) > 2:
-                    contextual_data.append(fixed_words[-2])  # add var name before = sign to contextual data
+            if prev_word == "=" and len(fixed_words) > 2: # shouldve already been caught but sanity check
+                    var_name = fixed_words[-2]
+                    if var_name not in contextual_data:
+                        contextual_data.append(var_name)  # add var name before = sign to contextual data
 
             fixed_words.append(new_word)
 
