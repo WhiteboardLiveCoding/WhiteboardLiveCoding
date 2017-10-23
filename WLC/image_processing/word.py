@@ -1,11 +1,9 @@
 import logging
-import sys
 
 import cv2
 
 from WLC.image_processing.character import Character
 from WLC.image_processing.extended_image import ExtendedImage
-from WLC.code_fixing.context import word_context_analysis
 
 LOGGER = logging.getLogger()
 
@@ -30,19 +28,21 @@ class Word(ExtendedImage):
         sorted_ctrs = sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
         characters = list()
-        previous_x = sys.maxsize
+        previous_x = -1000
+        previous_width = 1
 
         for i, ctr in enumerate(sorted_ctrs):
             x_axis, y_axis, width, height = cv2.boundingRect(ctr)
 
-            if height * width > 5 * 5 and abs(x_axis - previous_x) > 10:
+            if self._should_be_separated(previous_x, previous_width, x_axis, height, width):
                 roi = self.get_image()[0:self.get_height(), x_axis:x_axis + width]
 
                 min_y, max_y = self._truncate_black_borders(roi)
                 roi = roi[min_y:max_y]
 
-                characters.append(Character(roi, x_axis, y_axis, width, height, self.preferences))
+                characters.append(Character(roi, x_axis, y_axis, width, max_y - min_y, self.preferences))
                 previous_x = x_axis
+                previous_width = width
 
         LOGGER.debug("%d characters found in this word.", len(characters))
         return characters
@@ -64,3 +64,16 @@ class Word(ExtendedImage):
         """
 
         return "".join(char.get_code() for char in characters)
+
+
+    def _should_be_separated(self, previous_x, previous_width, x_axis, height, width):
+        separate = height * width > 5 * 5 and abs(x_axis - previous_x) > 10
+
+        if not separate:
+            return False
+        if previous_x + previous_width < x_axis:
+            return True
+        elif (previous_x + previous_width - x_axis) / previous_width < 0.5:
+            return True
+
+        return False

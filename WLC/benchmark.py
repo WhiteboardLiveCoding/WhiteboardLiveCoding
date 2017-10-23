@@ -47,7 +47,7 @@ def run_benchmarks():
     total_accuracy = 0
     total_length = 0
 
-    for i in range(1, 6):
+    for i in range(1, 9):
         accuracy, length = benchmark_file('assets/examples/images/example_{}.png'.format(i))
         total_accuracy += accuracy * length
         total_length += length
