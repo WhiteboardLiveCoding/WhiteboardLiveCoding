@@ -5,6 +5,7 @@ import cv2
 
 from WLC.image_processing.character import Character
 from WLC.image_processing.extended_image import ExtendedImage
+from WLC.code_fixing.context import word_context_analysis
 
 LOGGER = logging.getLogger()
 
@@ -17,9 +18,9 @@ class Word(ExtendedImage):
             cv2.imshow("Word", image)
             cv2.waitKey(0)
 
-    def get_code(self):
+    def get_code(self, contextual_data=None, prev_context=False):
         characters = self._segment_image()
-        return self._merge_code(characters)
+        return self._merge_code(characters, contextual_data, prev_context)
 
     def _segment_image(self):
         # find contours
@@ -54,9 +55,14 @@ class Word(ExtendedImage):
 
         return min_y, len(results)-max_y
 
-    def _merge_code(self, characters):
+    def _merge_code(self, characters, contextual_data=None, prev_context=False):
         """
         Merges all of the words into a line of code
+
+        :param characters: List of characters to parse
+        :param contextual_data: Contextual data - eg class names, assignments, or function names
+        :param prev_context: whether there is a previous context
+        :return:
         """
-        # TODO: Actually do something with the code
-        return "".join(character.get_code() for character in characters)
+
+        return word_context_analysis(characters, contextual_data, prev_context)
