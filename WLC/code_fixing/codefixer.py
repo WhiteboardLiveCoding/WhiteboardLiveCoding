@@ -112,8 +112,8 @@ class CodeFixer:
                             top3 = [digit_chars for digit_chars in possible_char[1:3] if str(digit_chars) in digits]
                             if any(top3):  # if any of top3 are digits
                                 new_args += top3[0]
-
-                        fixed_word = fixed_word[:argstart] + new_args + fixed_word[argend:]
+                        if len(new_args) == len(args):
+                            fixed_word = fixed_word[:argstart] + new_args + fixed_word[argend:]
 
             if prev_word == "=" and len(fixed_words) > 2:  # shouldve already been caught but sanity check
                 var_name = fixed_words[-2]
