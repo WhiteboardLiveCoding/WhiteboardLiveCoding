@@ -63,8 +63,15 @@ class Word(ExtendedImage):
         :return:
         """
 
-        return "".join(char.get_code() for char in characters)
+        coded_chars = []
+        char_variances = {}
+        for idx, char in enumerate(characters):
+            code_char, other_poss_chars = char.get_code()
 
+            char_variances[idx] = other_poss_chars
+            coded_chars.append(code_char)
+
+        return "".join(coded_chars), char_variances
 
     def _should_be_separated(self, previous_x, previous_width, x_axis, height, width):
         separate = height * width > 5 * 5 and abs(x_axis - previous_x) > 10

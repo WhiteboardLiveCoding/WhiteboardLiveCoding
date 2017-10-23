@@ -26,7 +26,7 @@ def benchmark_file(file_name):
     expected_code = _get_expected_code(file_name)
     picture = Camera().read_file(file_name, None)
     image = Preprocessor().process(picture)
-    code, indents = image.get_code()
+    code, indents, poss_lines = image.get_code()
     code = code.lower()
     fixed_code = CodeFixer(code, indents).fix()
 

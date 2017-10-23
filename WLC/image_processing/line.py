@@ -59,4 +59,13 @@ class Line(ExtendedImage):
         """
         Merges all of the words into a line of code
         """
-        return " ".join(word.get_code() for word in words)
+
+        coded_words = []
+        word_variances = {}
+        for idx, word in enumerate(words):
+            code_word, poss_chars = word.get_code()
+
+            word_variances[idx] = poss_chars
+            coded_words.append(code_word)
+
+        return " ".join(coded_words), word_variances

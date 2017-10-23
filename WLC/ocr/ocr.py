@@ -35,23 +35,15 @@ class OCR(metaclass=Singleton):
         mapping_path = join(dirname(__file__), 'model/mapping.p')
         self.mapping = pickle.load(open(mapping_path, 'rb'))
 
-    def predict(self, char, get_letters=False):
+    def predict(self, char):
         char = char.reshape(1, 28, 28, 1)
 
         char = char.astype('float32')
 
-        # Normalize to prevent issues with model
         char /= 255
 
         prediction = self.model.predict(char)
+        sorted_preds = np.argsort(prediction, axis=1)[0]
 
-        if get_letters:
-            sorted = np.argsort(prediction, axis=1)[0]
-
-            res = reversed([chr(self.mapping[(int(elem))]) for elem in sorted])
-            res = [r for r in res if r.lower() in string.ascii_lowercase]
-            return res[0]
-
-        character = chr(self.mapping[(int(np.argmax(prediction, axis=1)[0]))])
-
-        return character
+        res = [chr(self.mapping[(int(elem))]) for elem in sorted_preds][::-1]
+        return res[0], res[:7]

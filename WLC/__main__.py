@@ -57,7 +57,7 @@ def main(show_pic=False, show_line=False, show_word=False, show_character=False,
     image = Preprocessor().process(picture)
 
     LOGGER.info("Obtaining code")
-    code, indents = image.get_code()
+    code, indents, poss_lines = image.get_code()  # TODO: use poss_lines variations to fix code
     code = code.lower()
 
     fixed_code = CodeFixer(code, indents).fix()
