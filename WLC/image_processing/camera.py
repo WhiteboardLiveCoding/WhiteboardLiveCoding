@@ -34,8 +34,6 @@ class Camera:
 
             camera_id += 1
 
-        return self.read_file("assets/examples/images/for_loop.png", to_show)
-
         if camera_id < 0:
             raise Exception('No camera found')
 
@@ -58,8 +56,7 @@ class Camera:
 
         to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
 
-
         if not image_path:
-            image_path = 'assets/examples/images/example_1.png'
+            image_path = 'assets/examples/images/for_loop.png'
 
         return self.read_file(image_path, to_show)

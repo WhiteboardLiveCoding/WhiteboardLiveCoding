@@ -7,6 +7,10 @@ from WLC.image_processing.extended_image import ExtendedImage
 
 LOGGER = logging.getLogger()
 
+CHARACTER_SEPARATION = 5
+CHARACTER_DIMENSION = 5
+MAXIMUM_OVERLAP = 0.5
+
 
 class Word(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
@@ -74,13 +78,13 @@ class Word(ExtendedImage):
         return "".join(coded_chars), char_variances
 
     def _should_be_separated(self, previous_x, previous_width, x_axis, height, width):
-        separate = height * width > 5 * 5 and abs(x_axis - previous_x) > 10
+        separate = height * width > CHARACTER_DIMENSION ** 2 and abs(x_axis - previous_x) > CHARACTER_SEPARATION
 
         if not separate:
             return False
         if previous_x + previous_width < x_axis:
             return True
-        elif (previous_x + previous_width - x_axis) / previous_width < 0.5:
+        elif (previous_x + previous_width - x_axis) / previous_width < MAXIMUM_OVERLAP:
             return True
 
         return False
