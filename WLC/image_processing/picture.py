@@ -13,6 +13,7 @@ LOGGER = logging.getLogger()
 class Picture(ExtendedImage):
     INDENTATION_THRESHOLD = 50
     ARTIFACT_PERCENTAGE_THRESHOLD = 0.08
+    MINIMUM_LINE_OVERLAP = 0.25
 
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
@@ -169,7 +170,8 @@ class Picture(ExtendedImage):
             for merged_ctr in merged:
                 x2, y2, width2, height2 = cv2.boundingRect(merged_ctr)
 
-                if x1 <= x2 and y1 <= y2 and x1 + width1 >= x2 + width2 and y1 + height1 >= y2 + height2:
+                if (x1 <= x2 and y1 <= y2 and x1 + width1 >= x2 + width2 and y1 + height1 >= y2 + height2) or \
+                        (y1 < y2 < y1 + height1 and (y1 + height1 - y2) / height1 > self.MINIMUM_LINE_OVERLAP):
                     merged.append(np.concatenate((ctr, merged_ctr), axis=0))
                     remove = merged_ctr
                     add = False
