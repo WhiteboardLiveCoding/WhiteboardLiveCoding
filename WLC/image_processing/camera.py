@@ -57,6 +57,6 @@ class Camera:
         to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
 
         if not image_path:
-            image_path = 'assets/examples/images/fib_1.png'
+            image_path = 'assets/examples/images/signs_2.jpg'
 
         return self.read_file(image_path, to_show)
