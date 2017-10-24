@@ -7,6 +7,9 @@ from fuzzysearch import find_near_matches
 KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "assert", "range"]
 LOGGER = logging.getLogger()
 
+SPEC_ATTR = ["doc", "name", "qualname", "module", "defaults", "code", "globals", "dict", "closure",
+             "annotations", "kwdefaults"]
+
 
 class CodeFixer:
     def __init__(self, code, indents, poss_lines):
@@ -31,13 +34,16 @@ class CodeFixer:
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
-    def _levenshtein(self, word):
+    def _levenshtein(self, word, check_on=None):
+        if not check_on:
+            check_on = self.context + KW_LIST
+
         start = 0  # doesn't change
         end = 0
         l_dist = 10  # max change is 2 anyway
         curr_best_word = None
 
-        for kw in self.context + KW_LIST:
+        for kw in check_on:
             pos = find_near_matches(kw, word, max_l_dist=min(2, len(kw) - 1), max_insertions=0, max_deletions=0)
 
             for p in pos or []:
@@ -51,14 +57,14 @@ class CodeFixer:
 
         return curr_best_word, start, end
 
-    def _fix_word(self, word, word_number, line_number, prev_word="", next_word=""):
+    def _fix_word(self, word, word_number=None, line_number=None, prev_word="", next_word="", check_on=None):
         if prev_word == "import" or prev_word == "for" or next_word == "=":
             if word and word not in self.context:
                 self.context.append(word)  # add the imported module, or the var name to contextual data
             return word
 
         elif not prev_word:
-            best_word, start, end = self._levenshtein(word)
+            best_word, start, end = self._levenshtein(word, check_on=check_on)
             if best_word:
                 word = word[:start] + best_word + word[end:]
 
@@ -71,20 +77,29 @@ class CodeFixer:
             prev_word = fixed_words[-1] if fixed_words and fixed_words[-1] in ["def", "class", "import"] else None
             next_word = words[word_number + 1] if len(words) > word_number + 1 else None
 
-            fixed_word = self._fix_word(word, word_number, line_number,
-                                        prev_word=prev_word, next_word=next_word)
+            fixed_word = word  # set default
 
-            if prev_word == "class" or prev_word == "def":  # class/method/function declaration
-                self._set_decl(fixed_word)
+            if fixed_word.startswith('--') and fixed_word.endswith('--'):
+                fixed_word = "__" + self._fix_word(fixed_word.strip('--'), check_on=SPEC_ATTR) + "__"
+
+            elif prev_word == "class" or prev_word == "def":  # class/method/function declaration
+                self._set_decl(word)
 
             elif prev_word == "for":  # for X in _
-                self._set_forloop_var(fixed_word)
+                self._set_forloop_var(word)
 
-            elif "(" in fixed_word and ")" in fixed_word:  # method/function call
+            elif "(" in word and ")" in word:  # method/function call
                 # TODO: add support for multiple args -> requires more context due to spaces, commas etc
-                argstart = fixed_word.find("(") + 1
-                argend = fixed_word.rfind(")")
-                args = fixed_word[argstart:argend]
+                argstart = word.find("(") + 1
+                argend = word.rfind(")")
+                args = word[argstart:argend]
+
+                # attempt to fix the called func_name being invalid
+                func_name = word[:argstart - 1]
+                if func_name not in self.context:
+                    fixed_func_name = self._fix_word(func_name)
+                    if fixed_func_name in self.context:
+                        word = func_name + word[argstart - 1:]
 
                 if args in self.context or all(
                                 arg_char in digits for arg_char in args):  # TODO: add support for string args
@@ -92,6 +107,10 @@ class CodeFixer:
 
                 elif args:
                     fixed_word = self._fix_args(args, argstart, argend, fixed_word, line_number, word_number)
+
+            else:
+                fixed_word = self._fix_word(word, word_number, line_number,
+                                            prev_word=prev_word, next_word=next_word)
 
             if prev_word == "=" and len(fixed_words) > 2:  # shouldve already been caught but sanity check
                 self._set_var(fixed_words)
