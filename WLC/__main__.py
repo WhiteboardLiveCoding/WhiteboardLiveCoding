@@ -78,8 +78,13 @@ def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_
     else:
         code_executor = CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT)
         image = Preprocessor().process(picture)
-        code = image.get_code().lower()
-        code_executor.execute_code(code)
+        code, indents, poss_lines = image.get_code()  # TODO: use poss_lines variations to fix code
+        code = code.lower()
+
+        LOGGER.info("Unfixed code: \n%s\n", code)
+
+        fixed_code = CodeFixer(code, indents).fix()
+        code_executor.execute_code(fixed_code)
 
 
 if __name__ == '__main__':
