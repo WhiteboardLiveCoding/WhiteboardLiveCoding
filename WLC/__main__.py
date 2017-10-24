@@ -1,11 +1,13 @@
 import argparse
 import logging
+import tkinter as tk
 
 from WLC.code_executor import CodeExecutor, DEFAULT_DOCKER_PORT
 from WLC.code_fixing.codefixer import CodeFixer
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
 from WLC.utils.formatting import FORMAT
+from WLC.utils.gui import Gui
 
 logging.basicConfig(format=FORMAT)
 LOGGER = logging.getLogger()
@@ -14,6 +16,7 @@ LOGGER = logging.getLogger()
 def arguments():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-g", "--gui", action="store_true", default=False, help="Show gui")
     parser.add_argument("-p", "--pics", action="store_true", default=False, help="Show pics")
     parser.add_argument("-l", "--lines", action="store_true", default=False, help="Show lines")
     parser.add_argument("-w", "--words", action="store_true", default=False, help="Show words")
@@ -23,6 +26,7 @@ def arguments():
     parser.add_argument("-a", "--annotate", action="store_true", default=False, help="Ask user to annotate images")
 
     args, unknown = parser.parse_known_args()
+    show_gui = args.gui
     show_pic = args.pics
     show_line = args.lines
     show_word = args.words
@@ -35,6 +39,7 @@ def arguments():
         LOGGER.setLevel(logging.DEBUG)
 
     LOGGER.debug("""Command line arguments parsed:
+    - show_gui: %s
     - show_pic: %s
     - show_line: %s
     - show_word: %s
@@ -42,35 +47,50 @@ def arguments():
     - debug_mode: %s
     - docker_ip: %s
     - annotate: %s
-    """, show_pic, show_line, show_word, show_character, debug_mode, docker_ip, annotate)
+    """, show_gui, show_pic, show_line, show_word, show_character, debug_mode, docker_ip, annotate)
 
-    return show_pic, show_line, show_word, show_character, docker_ip, annotate
+    return show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate
 
 
-def main(show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip="", annotate=False):
-    executor = CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT)
+def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip="",
+         annotate=False):
+    picture_path = None
+
+    if show_gui:
+        LOGGER.info("Setting up GUI of the application")
+        root = tk.Tk()
+        root.geometry("1200x1000")
+        app = Gui(root)
+        picture_path = app.get_picture()
 
     LOGGER.info("Acquiring Image")
-    picture = Camera().capture(show_pic, show_line, show_word, show_character, annotate)
+    picture = Camera().capture(show_pic, show_line, show_word, show_character, picture_path, annotate)
 
-    LOGGER.info("Preprocessing Image")
-    image = Preprocessor().process(picture)
+    if show_gui:
+        app.save_picture(picture)
+        app.save_docker_ip(docker_ip)
+        app.display_picture(picture_path)
 
-    LOGGER.info("Obtaining code")
-    code, indents, poss_lines = image.get_code()  # TODO: use poss_lines variations to fix code
-    code = code.lower()
+        LOGGER.info("Image loaded, waiting for execute click")
+        app.init_button()
+        app.mainloop()
 
-    fixed_code = CodeFixer(code, indents, poss_lines).fix()
+    else:
+        code_executor = CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT)
+        image = Preprocessor().process(picture)
+        code, indents, poss_lines = image.get_code()  # TODO: use poss_lines variations to fix code
+        code = code.lower()
 
-    executor.execute_code(fixed_code)
+        LOGGER.info("Unfixed code: \n%s\n", code)
 
-    LOGGER.info("Complete!")
+        fixed_code = CodeFixer(code, indents, poss_lines).fix()
+        code_executor.execute_code(fixed_code)
 
 
 if __name__ == '__main__':
     LOGGER.setLevel(logging.INFO)
     LOGGER.info("Welcome to Live Whiteboard Coding!")
 
-    show_pic, show_line, show_word, show_character, docker_ip, annotate = arguments()
-    main(show_pic, show_line, show_word, show_character, docker_ip, annotate)
+    show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate = arguments()
+    main(show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate)
 
