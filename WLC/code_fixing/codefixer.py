@@ -1,9 +1,11 @@
 import keyword
+import logging
 from string import digits
 
 from fuzzysearch import find_near_matches
 
 KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "assert", "range"]
+LOGGER = logging.getLogger()
 
 
 class CodeFixer:
@@ -73,7 +75,6 @@ class CodeFixer:
                                         prev_word=prev_word, next_word=next_word)
 
             if prev_word == "class" or prev_word == "def":  # class/method/function declaration
-
                 self._set_decl(fixed_word)
 
             elif prev_word == "for":  # for X in _
@@ -95,6 +96,8 @@ class CodeFixer:
             if prev_word == "=" and len(fixed_words) > 2:  # shouldve already been caught but sanity check
                 self._set_var(fixed_words)
 
+            if word != fixed_word:
+                LOGGER.debug("Replaced %s with %s", word, fixed_word)
             fixed_words.append(fixed_word)
 
         return " ".join(fixed_words)
