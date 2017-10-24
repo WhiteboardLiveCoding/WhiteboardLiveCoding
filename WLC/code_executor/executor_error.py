@@ -1,5 +1,6 @@
 PY_STR_ERR_SYNTAX = "SyntaxError:"
 
+
 class ExecutorError:
     ERROR_TYPE_SYNTAX = 0
 

@@ -1,6 +1,7 @@
 import logging
 import re
 import traceback
+
 import docker
 
 from WLC.code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
@@ -81,4 +82,3 @@ class CodeExecutor:
             return e
 
         return None
-
