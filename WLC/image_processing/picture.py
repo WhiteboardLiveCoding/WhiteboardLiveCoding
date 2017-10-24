@@ -85,9 +85,17 @@ class Picture(ExtendedImage):
         Should return a string with the code from all of the lines, this function will also have to figure out how far
         each line is indented.
         """
-        indent = self._determine_indentation(lines)
-        return "\n".join("{indent}{code}".format(indent="  " * indent, code=line.get_code())
-                         for indent, line in zip(indent, lines))
+        indents = self._determine_indentation(lines)
+
+        coded_lines = []
+        lines_variations = {}
+        for idx, (indent, line) in enumerate(zip(indents, lines)):
+            code_line, poss_words = line.get_code()
+
+            lines_variations[idx] = poss_words
+            coded_lines.append("{indent}{code}".format(indent="  " * indent, code=code_line))
+
+        return "\n".join(coded_lines), indents, lines_variations
 
     def _determine_indentation(self, lines):
         """

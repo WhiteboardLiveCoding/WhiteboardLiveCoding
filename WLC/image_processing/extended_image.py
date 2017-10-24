@@ -71,6 +71,14 @@ class ExtendedImage:
         rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
         return cv2.warpAffine(img, rot_matrix, (width, height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
+    def _truncate_black_borders(self, img):
+        results = list(map(lambda row: sum(row), img))
+
+        min_y = next(x[0] for x in enumerate(results) if x[1] > 0)
+        max_y = next(x[0] for x in enumerate(reversed(results)) if x[1] > 0)
+
+        return min_y, len(results) - max_y
+
 
 class Preferences:
     def __init__(self, show_pic=False, show_line=False, show_word=False, show_char=False, annotate=False):

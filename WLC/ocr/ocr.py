@@ -1,4 +1,5 @@
 import pickle
+import string
 from os import environ
 from os.path import dirname, join
 
@@ -39,11 +40,10 @@ class OCR(metaclass=Singleton):
 
         char = char.astype('float32')
 
-        # Normalize to prevent issues with model
         char /= 255
 
         prediction = self.model.predict(char)
+        sorted_preds = np.argsort(prediction, axis=1)[0]
 
-        character = chr(self.mapping[(int(np.argmax(prediction, axis=1)[0]))])
-
-        return character
+        res = [chr(self.mapping[(int(elem))]) for elem in sorted_preds][::-1]
+        return res[0], res[:7]

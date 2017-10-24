@@ -5,6 +5,7 @@ import cv2
 
 from WLC.image_processing.extended_image import Preferences
 from WLC.image_processing.picture import Picture
+from WLC.utils.path import get_full_path
 
 LOGGER = logging.getLogger()
 
@@ -33,7 +34,7 @@ class Camera:
 
             camera_id += 1
 
-        camera_id -= 1
+        return self.read_file("assets/examples/images/for_loop.png", to_show)
 
         if camera_id < 0:
             raise Exception('No camera found')
@@ -41,12 +42,8 @@ class Camera:
         self._camera_id = camera_id
         return camera_id
 
-    def get_full_path(self, file_name):
-        proj_path = dirname(dirname(dirname(__file__)))  # 3 dirs up. Change this if proj structure is modified.
-        return join(proj_path, file_name)
-
     def read_file(self, file_name, to_show):
-        input_path = self.get_full_path(file_name)
+        input_path = get_full_path(file_name)
         img = cv2.imread(input_path)
         height, width, _ = img.shape
         return Picture(img, 0, 0, width, height, to_show)
@@ -60,6 +57,7 @@ class Camera:
         # ret, frame = cap.read()
 
         to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
+
 
         if not image_path:
             image_path = 'assets/examples/images/example_1.png'
