@@ -1,18 +1,38 @@
-import io
 import logging
-import sys
-from enum import Enum
-
+import re
+import traceback
 import docker
+
+from WLC.code_executor_utils.redirected_std import redirected_std
 
 LOGGER = logging.getLogger()
 
 DEFAULT_DOCKER_PORT = "2375"
 
-class ExecutorError(Enum):
-    ERROR_TYPE = 0
-    ERROR_LINE = 1
-    ERROR_STRING = 2
+
+class ExecutorError:
+    ERROR_TYPE_SYNTAX = 0
+
+    def __init__(self, type, line):
+        self.type = type
+        self.line = line
+
+    def __str__(self):
+        type_str = "<unknown>"
+        if self.type == self.ERROR_TYPE_SYNTAX:
+            type_str = "syntax error"
+
+        return "type: " + type_str + " at line: " + str(self.line)
+
+    def get_type(self):
+        return self.type
+
+    def get_line(self):
+        return self.line
+
+
+PY_STR_ERR_SYNTAX = "SyntaxError:"
+
 
 class CodeExecutor:
     def __init__(self, ip="", port=""):
@@ -26,31 +46,60 @@ class CodeExecutor:
         LOGGER.info("Executing code: \n%s\n", code)
 
         if self.force_local:
-            return self.execute_local(code)
+            self.execute_local(code)
         else:
             self.execute_sandbox(code)
 
     def execute_local(self, code):
-        with io.StringIO() as code_out:
-            sys.stdout = code_out
+        LOGGER.info("Executing locally (UNSAFE! use -ip parameter to run the code safely) . . .\n")
 
+        error_string = None
+        stdout_prog = ""
+
+        with redirected_std() as out:
             try:
                 exec(code)
-            except Exception as e:
-                LOGGER.exception("An error was raised!")
-                return str(e)
-            else:
-                LOGGER.info("No errors occurred.")
+                stdout_prog = out.str_stdout
+            except:
+                error_string = traceback.format_exc()
 
-            sys.stdout = sys.__stdout__
+        if error_string:
+            e = self.check_error(error_string)
+            if e:
+                return e
 
-            s = code_out.getvalue()
-
-            LOGGER.info("Output:\n%s\n", s)
+        LOGGER.info("Output:\n%s\n", stdout_prog)
 
     def execute_sandbox(self, code):
-        LOGGER.info("Executing in sandbox...\n")
+        LOGGER.info("Executing in sandbox . . .\n")
         container = self.client.containers.run('python', 'python -c \"{}\"'.format(code), detach=True)
         container.wait()
 
-        LOGGER.info("\n\n # Container output: \n%s\n", container.logs(stderr=True))
+        stdout_prog = container.logs(stdout=True).decode("utf-8")
+        stderr_prog = container.logs(stderr=True).decode("utf-8")
+
+        e = self.check_error(stderr_prog)
+        if e:
+            return e
+
+        LOGGER.info("Output:\n%s\n", stdout_prog)
+
+    def check_error(self, err):
+        start_point = err.find("<string>")
+        if start_point == -1:
+            start_point = 0
+
+        if err.find(PY_STR_ERR_SYNTAX) != -1:
+            match = re.search("line ([0-9]+)", err[start_point:])
+            if match:
+                line = match.group(1)
+            else:
+                line = -1
+                LOGGER.info("Could not parse error, error string: \n%s\n", err)
+            e = ExecutorError(ExecutorError.ERROR_TYPE_SYNTAX, line)
+            LOGGER.info("Execution failed with error: %s\n", str(e))
+
+            return e
+
+        return None
+
