@@ -20,7 +20,7 @@ class CodeExecutor:
         LOGGER.info("Executing code: \n%s\n", code)
 
         if self.force_local:
-            self.execute_local(code)
+            return self.execute_local(code)
         else:
             self.execute_sandbox(code)
 
@@ -30,8 +30,9 @@ class CodeExecutor:
 
             try:
                 exec(code)
-            except:
+            except Exception as e:
                 LOGGER.exception("An error was raised!")
+                return str(e)
             else:
                 LOGGER.info("No errors occurred.")
 
