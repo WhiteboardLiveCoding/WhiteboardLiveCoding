@@ -8,7 +8,7 @@ KW_LIST = keyword.kwlist + ["print", "list", "dict", "set", "file", "open", "ass
 LOGGER = logging.getLogger()
 
 SPEC_ATTR = ["doc", "name", "qualname", "module", "defaults", "code", "globals", "dict", "closure",
-             "annotations", "kwdefaults"]
+             "annotations", "kwdefaults", "main"]
 
 
 class CodeFixer:
@@ -57,14 +57,22 @@ class CodeFixer:
 
         return curr_best_word, start, end
 
-    def _fix_word(self, word, word_number=None, line_number=None, prev_word="", next_word="", check_on=None):
+    def _fix_word(self, word, word_number=None, line_number=None, prev_word="", next_word=""):
         if prev_word == "import" or prev_word == "for" or next_word == "=":
             if word and word not in self.context:
                 self.context.append(word)  # add the imported module, or the var name to contextual data
             return word
 
+        elif word.startswith('--') and word.endswith('--'):
+            no_dash = word.strip('--')
+            best_word, start, end = self._levenshtein(no_dash, check_on=SPEC_ATTR)
+            if best_word and len(best_word) == len(no_dash):
+                word = "__" + best_word + "__"
+            else:
+                word = "__" + no_dash + "__"
+
         elif not prev_word:
-            best_word, start, end = self._levenshtein(word, check_on=check_on)
+            best_word, start, end = self._levenshtein(word)
             if best_word:
                 word = word[:start] + best_word + word[end:]
 
@@ -79,36 +87,17 @@ class CodeFixer:
 
             fixed_word = word  # set default
 
-            if fixed_word.startswith('--') and fixed_word.endswith('--'):
-                fixed_word = "__" + self._fix_word(fixed_word.strip('--'), check_on=SPEC_ATTR) + "__"
-
-            elif prev_word == "class" or prev_word == "def":  # class/method/function declaration
+            if prev_word == "class" or prev_word == "def":  # class/method/function declaration
                 self._set_decl(word)
 
-            elif prev_word == "for":  # for X in _
+            elif prev_word == "for":  # se var X as context in a 'for X in _' statement
                 self._set_forloop_var(word)
 
             elif "(" in word and ")" in word:  # method/function call
-                # TODO: add support for multiple args -> requires more context due to spaces, commas etc
-                argstart = word.find("(") + 1
-                argend = word.rfind(")")
-                args = word[argstart:argend]
+                fixed_word = self._fix_funccall(word, line_number, word_number)
 
-                # attempt to fix the called func_name being invalid
-                func_name = word[:argstart - 1]
-                if func_name not in self.context:
-                    fixed_func_name = self._fix_word(func_name)
-                    if fixed_func_name in self.context:
-                        word = func_name + word[argstart - 1:]
-
-                if args in self.context or all(
-                                arg_char in digits for arg_char in args):  # TODO: add support for string args
-                    pass  # all good here, valid variable or int
-
-                elif args:
-                    fixed_word = self._fix_args(args, argstart, argend, fixed_word, line_number, word_number)
-
-            else:
+            # TODO: functions with spaces in args
+            else:  # not detected as anything special - attempt to autocorrect
                 fixed_word = self._fix_word(word, word_number, line_number,
                                             prev_word=prev_word, next_word=next_word)
 
@@ -121,24 +110,55 @@ class CodeFixer:
 
         return " ".join(fixed_words)
 
-    def _fix_args(self, args, argstart, argend, fixed_word, line_number, word_number):
-        new_args, start, end = self._levenshtein(args)
-        if new_args and new_args in self.context:
-            pass  # all good
+    def _fix_funccall(self, word, line_number, word_number):
+        # TODO: add support for multiple args -> requires more context due to spaces, commas etc
+        argstart = word.find("(") + 1
+        argend = word.rfind(")")
+        args = word[argstart:argend]
+
+        # attempt to fix the called func_name being invalid
+        func_name = word[:argstart - 1]
+        if func_name not in self.context:
+            fixed_func_name = self._fix_word(func_name)
+            if fixed_func_name in self.context:
+                word = func_name + word[argstart - 1:]
+
+        if args in self.context or all(
+                        arg_char in digits for arg_char in args):  # TODO: add support for string args
+            pass  # all good here, valid variable or int
+
+        elif args:
+            fixed_args = self._fix_args(args, word, line_number, word_number)
+            word = word[:argstart] + fixed_args + word[argend:]
+
+        return word
+
+    def _fix_args(self, args, fixed_word, line_number, word_number):
+        new_args = args
+        some_args, start, end = self._levenshtein(args)
+        if "(" in args and ")" in args:  # TODO: multiple args/words
+            new_args = self._fix_funccall(args, line_number, word_number)
+
+        elif some_args and some_args in self.context:
+            new_args = some_args
+
+        elif args.startswith("--") and args.endswith("--"):
+            new_args = self._fix_word(args)
+
         else:
             # we should use digits
             possibles = self.poss_lines[line_number][word_number]
-            new_args = ""
+            poss_args = ""
             start_pos = fixed_word.find(args)
             curr_possibilities = {i: possibles[i] for i in range(start_pos, start_pos + len(args))}
             for char, possible_char in zip(args, curr_possibilities.values()):
                 top3 = [digit_chars for digit_chars in possible_char[1:3] if str(digit_chars) in digits]
                 if any(top3):  # if any of top3 are digits
-                    new_args += top3[0]
-            if len(new_args) == len(args):
-                fixed_word = fixed_word[:argstart] + new_args + fixed_word[argend:]
+                    poss_args += top3[0]
+            if len(poss_args) == len(args):
+                new_args = poss_args
 
-        return fixed_word
+        return new_args
 
     def _set_decl(self, fixed_word):
         if "(" in fixed_word:
