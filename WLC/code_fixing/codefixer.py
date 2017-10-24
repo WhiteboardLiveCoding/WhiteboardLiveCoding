@@ -53,7 +53,7 @@ class CodeFixer:
         if contextual_data is None:
             contextual_data = []
 
-        if prev_word == "import" or next_word == "=":
+        if prev_word == "import" or prev_word == "for" or next_word == "=":
             if word and word not in contextual_data:
                 contextual_data.append(word)  # add the imported module, or the var name to contextual data
             return word, contextual_data
@@ -78,8 +78,7 @@ class CodeFixer:
             fixed_word, contextual_data = self._fix_word(word, idx, line_number, contextual_data=contextual_data,
                                                          prev_word=prev_word, next_word=next_word)
 
-            #  TODO: add context logic for the "for X in _" syntax
-            if prev_word == "class" or prev_word == "def": # class/method/function declaration
+            if prev_word == "class" or prev_word == "def":  # class/method/function declaration
 
                 if "(" in fixed_word:
                     name = fixed_word[:fixed_word.find("(")]
@@ -90,6 +89,10 @@ class CodeFixer:
                     args = fixed_word[fixed_word.find("(") + 1:fixed_word.rfind(")")]
                     if args and args not in contextual_data:
                         contextual_data.append(args)
+
+            elif prev_word == "for":  # for X in _
+                if fixed_word and fixed_word not in contextual_data:
+                    contextual_data.append(fixed_word)
 
             elif "(" in fixed_word and ")" in fixed_word:  # method/function call
                 # TODO: add support for multiple args
