@@ -26,7 +26,7 @@ class Gui(tk.Frame):
         image = Preprocessor().process(picture)
         code, indents, poss_lines = image.get_code()
         code = code.lower()
-        fixed_code = CodeFixer(code, indents).fix()
+        fixed_code = CodeFixer(code, indents, poss_lines).fix()
         value = str(code_executor.execute_code(fixed_code))
         self.display_ocr(fixed_code)
         self.display_output(value)

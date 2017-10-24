@@ -73,8 +73,8 @@ def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_
 
         LOGGER.info("Image loaded, waiting for execute click")
         app.init_button()
-
         app.mainloop()
+
     else:
         code_executor = CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT)
         image = Preprocessor().process(picture)
@@ -83,7 +83,7 @@ def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_
 
         LOGGER.info("Unfixed code: \n%s\n", code)
 
-        fixed_code = CodeFixer(code, indents).fix()
+        fixed_code = CodeFixer(code, indents, poss_lines).fix()
         code_executor.execute_code(fixed_code)
 
 

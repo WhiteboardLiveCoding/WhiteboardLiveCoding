@@ -32,7 +32,7 @@ def benchmark_file(file_name):
     image = Preprocessor().process(picture)
     code, indents, poss_lines = image.get_code()
     code = code.lower()
-    fixed_code = CodeFixer(code, indents).fix()
+    fixed_code = CodeFixer(code, indents, poss_lines).fix()
 
     difference = editdistance.eval("".join(code.split()), "".join(expected_code.split()))
     difference_fixed = editdistance.eval("".join(fixed_code.split()), "".join(expected_code.split()))
