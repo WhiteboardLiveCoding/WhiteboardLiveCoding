@@ -1,6 +1,6 @@
 import keyword
 import logging
-from string import digits
+import string
 
 from fuzzysearch import find_near_matches
 
@@ -93,7 +93,8 @@ class CodeFixer:
             elif prev_word == "for":  # se var X as context in a 'for X in _' statement
                 self._set_forloop_var(word)
 
-            elif "(" in word and ")" in word:  # method/function call
+            # TODO: check valid function name
+            elif "(" in word and ")" in word and len(word[:word.find('(')]) > 0:  # method/function call + prefixed by function name
                 fixed_word = self._fix_funccall(word, line_number, word_number)
 
             # TODO: functions with spaces in args
@@ -124,7 +125,7 @@ class CodeFixer:
                 word = func_name + word[argstart - 1:]
 
         if args in self.context or all(
-                        arg_char in digits for arg_char in args):  # TODO: add support for string args
+                        arg_char in string.digits for arg_char in args):  # TODO: add support for string args
             pass  # all good here, valid variable or int
 
         elif args:
@@ -136,7 +137,8 @@ class CodeFixer:
     def _fix_args(self, args, fixed_word, line_number, word_number):
         new_args = args
         some_args, start, end = self._levenshtein(args)
-        if "(" in args and ")" in args:  # TODO: multiple args/words
+        # TODO: multiple args/words
+        if "(" in args and ")" in args and len(args[:args.find('(')]) > 0: # is a nested function
             new_args = self._fix_funccall(args, line_number, word_number)
 
         elif some_args and some_args in self.context:
@@ -152,7 +154,7 @@ class CodeFixer:
             start_pos = fixed_word.find(args)
             curr_possibilities = {i: possibles[i] for i in range(start_pos, start_pos + len(args))}
             for char, possible_char in zip(args, curr_possibilities.values()):
-                top3 = [digit_chars for digit_chars in possible_char[1:3] if str(digit_chars) in digits]
+                top3 = [digit_chars for digit_chars in possible_char[1:3] if str(digit_chars) in string.digits]
                 if any(top3):  # if any of top3 are digits
                     poss_args += top3[0]
             if len(poss_args) == len(args):
