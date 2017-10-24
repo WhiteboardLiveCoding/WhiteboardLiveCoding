@@ -1,12 +1,18 @@
 import io
 import logging
 import sys
+from enum import Enum
+
 import docker
 
 LOGGER = logging.getLogger()
 
 DEFAULT_DOCKER_PORT = "2375"
 
+class ExecutorError(Enum):
+    ERROR_TYPE = 0
+    ERROR_LINE = 1
+    ERROR_STRING = 2
 
 class CodeExecutor:
     def __init__(self, ip="", port=""):
@@ -47,4 +53,4 @@ class CodeExecutor:
         container = self.client.containers.run('python', 'python -c \"{}\"'.format(code), detach=True)
         container.wait()
 
-        LOGGER.info("\n\n # Container output: \n%s\n", container.logs(stdout=True))
+        LOGGER.info("\n\n # Container output: \n%s\n", container.logs(stderr=True))
