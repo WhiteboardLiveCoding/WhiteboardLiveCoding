@@ -28,7 +28,7 @@ class Gui(tk.Frame):
         code, indents, poss_lines = image.get_code()
         code = code.lower()
         fixed_code = CodeFixer(code, indents).fix()
-        value = code_executor.execute_code(fixed_code)
+        value = str(code_executor.execute_code(fixed_code))
         self.display_ocr(fixed_code)
         self.display_output(value)
 

@@ -23,9 +23,9 @@ class CodeExecutor:
         LOGGER.info("Executing code: \n%s\n", code)
 
         if self.force_local:
-            self.execute_local(code)
+            return self.execute_local(code)
         else:
-            self.execute_sandbox(code)
+            return self.execute_sandbox(code)
 
     def execute_local(self, code):
         LOGGER.info("Executing locally (UNSAFE! use -ip parameter to run the code safely) . . .\n")
@@ -46,6 +46,7 @@ class CodeExecutor:
                 return e
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
+        return stdout_prog
 
     def execute_sandbox(self, code):
         LOGGER.info("Executing in sandbox . . .\n")
@@ -60,6 +61,7 @@ class CodeExecutor:
             return e
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
+        return stdout_prog
 
     def check_error(self, err):
         start_point = err.find("<string>")
