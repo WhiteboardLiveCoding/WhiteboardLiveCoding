@@ -1,8 +1,7 @@
 import tkinter as tk
-
-from tkinter import filedialog
 from os.path import dirname
-from WLC.code_executor import CodeExecutor, DEFAULT_DOCKER_PORT
+from tkinter import filedialog
+from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
 from WLC.code_fixing.codefixer import CodeFixer
 from WLC.image_processing.preprocessor import Preprocessor
 
@@ -28,7 +27,7 @@ class Gui(tk.Frame):
         code, indents, poss_lines = image.get_code()
         code = code.lower()
         fixed_code = CodeFixer(code, indents).fix()
-        value = code_executor.execute_code(fixed_code)
+        value = str(code_executor.execute_code(fixed_code))
         self.display_ocr(fixed_code)
         self.display_output(value)
 
