@@ -1,0 +1,5 @@
+(x,y) (a,b) (c,d) (a,b)
+(e,f) (g,h) (i,j) (i,j)
+"a*b" "a/b" "x+y" "x-y"
+x.y x.y x.y x.y x.y x.y
+1/2/3/4/5/6/7/8/9
