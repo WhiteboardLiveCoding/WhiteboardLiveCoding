@@ -3,35 +3,12 @@ import re
 import traceback
 import docker
 
-from WLC.code_executor_utils.redirected_std import redirected_std
+from WLC.code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
+from WLC.code_executor.redirected_std import redirected_std
 
 LOGGER = logging.getLogger()
 
 DEFAULT_DOCKER_PORT = "2375"
-
-
-class ExecutorError:
-    ERROR_TYPE_SYNTAX = 0
-
-    def __init__(self, type, line):
-        self.type = type
-        self.line = line
-
-    def __str__(self):
-        type_str = "<unknown>"
-        if self.type == self.ERROR_TYPE_SYNTAX:
-            type_str = "syntax error"
-
-        return "type: " + type_str + " at line: " + str(self.line)
-
-    def get_type(self):
-        return self.type
-
-    def get_line(self):
-        return self.line
-
-
-PY_STR_ERR_SYNTAX = "SyntaxError:"
 
 
 class CodeExecutor:

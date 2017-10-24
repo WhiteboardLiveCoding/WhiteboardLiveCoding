@@ -1,8 +1,8 @@
 import tkinter as tk
-
-from tkinter import filedialog
 from os.path import dirname
-from WLC.code_executor import CodeExecutor, DEFAULT_DOCKER_PORT
+from tkinter import filedialog
+
+from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
 from WLC.code_fixing.codefixer import CodeFixer
 from WLC.image_processing.preprocessor import Preprocessor
 
