@@ -1,0 +1,3 @@
+if kokos:
+  j = 4
+  kokos = False
