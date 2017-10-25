@@ -1,4 +1,4 @@
 def fib(n):
-	if i == 1:
+	if n == 1:
 	  return 1
 	return fib(n-1) + fib(n-2)

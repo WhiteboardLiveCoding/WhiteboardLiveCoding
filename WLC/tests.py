@@ -1,6 +1,6 @@
 from WLC.benchmark import run_benchmarks
 
-MINIMUM_ACCURACY = 60
+MINIMUM_ACCURACY = 80
 
 
 def test_benchmarks():
