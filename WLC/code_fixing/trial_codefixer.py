@@ -4,7 +4,11 @@ from math import ceil
 import regex
 
 RULES = list()
-SYNTAX = dict()
+SYNTAX = list()
+
+MINIMUM_PROBABILITY = 0.01
+PERMUTATION_LENGTH = 2
+ALLOWED_DIFFERENCE = 0.2
 
 
 class TrialCodeFixer:
@@ -14,63 +18,120 @@ class TrialCodeFixer:
         self.poss_lines = poss_lines
         self.context = []
 
-        SYNTAX['variable'] = '[a-z]\w*'
-        SYNTAX['statement'] = '.*'
-        SYNTAX['boolean'] = '.*'
+        SYNTAX.append(('VARIABLE', '[a-z]\w*'))
+        SYNTAX.append(('STATEMENT', '.*'))
+        SYNTAX.append(('BOOLEAN', '.*'))
 
-        RULES.append(('import .*', 7, self.fix_import))
-        RULES.append(('def ({variable})\(({statement})\):', 7, self.fix_def))
-        RULES.append(('class ({variable}):', 7, self.fix_class))
-        RULES.append(('if ({boolean}):', 4, self.fix_if))
-        RULES.append(('elif ({boolean}):', 6, self.fix_elif))
-        RULES.append(('else:', 5, self.fix_else))
-        RULES.append(('return ({statement})', 7, self.fix_return))
-        RULES.append(('while ({boolean}):', 7, self.fix_while))
-        RULES.append(('for ({variable}) in ({statement}):', 9, self.fix_for))
-        RULES.append(('for ({variable}) in range\(({statement})\):', 16, self.fix_for_range))
-        RULES.append(('({variable})\(({statement})\)', 2, self.fix_function_call))
-        RULES.append(('({variable}) = ({statement})', 3, self.fix_assignment))
-        RULES.append(('(.*)', 0, lambda groups: '{}'.format(*groups)))
+        RULES.append(('import (.*)', 7, None, self.fix_import))
+        RULES.append(('def (VARIABLE)\((STATEMENT)\):', 7, None, self.fix_def))
+        RULES.append(('class (VARIABLE):', 7, None, self.fix_class))
+        RULES.append(('if (BOOLEAN):', 4, None, self.fix_if))
+        RULES.append(('elif (BOOLEAN):', 6, None, self.fix_elif))
+        RULES.append(('else:', 5, None, self.fix_else))
+        RULES.append(('return (STATEMENT)', 7, None, self.fix_return))
+        RULES.append(('while (BOOLEAN):', 7, None, self.fix_while))
+        RULES.append(('for (VARIABLE) in (STATEMENT):', 9, None, self.fix_for))
+        RULES.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, None, self.fix_for_range))
+        RULES.append(('(VARIABLE)\((STATEMENT)\)', 2, None, self.fix_function_call))
+        RULES.append(('(VARIABLE) = (STATEMENT)', 3, None, self.fix_assignment))
+        RULES.append(('(.*)', 0, None, lambda groups: '{}'.format(*groups)))
 
     def fix(self):
+        poss_lines = self.poss_lines
         lines = self.code.splitlines()
         fixed_lines = list()
+        closest_matches = list()
 
-        for line in lines:
-            match, func = self.find_closest_match(line.lstrip())
-            groups = match.groups()[1:]
-            fixed_lines.append(func(groups))
+        for line, i in zip(lines, poss_lines):
+            joined = self.join_words(poss_lines[i])
+            simplified = self.reduce_line(joined)
+
+            closest_matches.append(self.find_closest_match(simplified))
+
+        for (match, analyze, _) in closest_matches:
+            if analyze:
+                analyze(match.groups()[1:])
+
+        for (match, _, fix) in closest_matches:
+            fixed_lines.append(fix(match.groups()[1:]))
 
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
-    def find_closest_match(self, line):
+    def join_words(self, poss_lines):
+        joined = list()
+
+        for word in range(len(poss_lines)):
+            for j in range(len(poss_lines[word])):
+                joined.append(poss_lines[word][j])
+
+            if word < len(poss_lines) - 1:
+                joined.append([(' ', 1)])
+
+        return joined
+
+    def reduce_line(self, line):
+        reduced = list()
+
+        for possibilities in line:
+            lowered = map(lambda p: (p[0].lower(), p[1]), possibilities)
+            filtered = list(map(lambda c: c[0], filter(lambda c: c[1] > MINIMUM_PROBABILITY, lowered)))
+            deduped = self.remove_duplicate_predictions(filtered)[:PERMUTATION_LENGTH]
+            reduced.append(deduped)
+
+        return reduced
+
+    def remove_duplicate_predictions(self, seq):
+        seen = set()
+        seen_add = seen.add
+        return [x for x in seq if not (x in seen or seen_add(x))]
+
+    def find_closest_match(self, poss_line):
         distance = sys.maxsize
         closest = None
         regexes = self.compile_regexes(RULES)
+        permutations = self.permutations(poss_line, 0)
 
-        for r, fixed, func in regexes:
-            match = r.match(line)
+        for r, fixed, analyze, fix in regexes:
+            for possible in permutations:
+                match = r.match(possible)
 
-
-            if match:
-                if sum(match.fuzzy_counts) - fixed < distance:
-                    distance = sum(match.fuzzy_counts) - fixed
-                    closest = (match, func)
+                if match:
+                    if sum(match.fuzzy_counts) - fixed < distance:
+                        distance = sum(match.fuzzy_counts) - fixed
+                        closest = (match, analyze, fix)
 
         return closest
+
+    def permutations(self, poss_line, i):
+        if i >= len(poss_line):
+            return ['']
+
+        results = list()
+        permutations = self.permutations(poss_line, i + 1)
+
+        for char in poss_line[i]:
+            for permutation in permutations:
+                results.append(char + permutation)
+
+        return results
 
     def compile_regexes(self, rules):
         regexes = list()
 
-        for rule, fixed, func in rules:
-            reg = '(?e)((?:%s){e<=%s})' % (rule, max(ceil(2 * fixed / 10), 0))
+        for i in range(len(SYNTAX)):
+            for j in range(i):
+                SYNTAX[i] = (SYNTAX[i][0], SYNTAX[i][1].replace(SYNTAX[j][0], SYNTAX[j][1]))
 
-            for key in SYNTAX:
-                reg = reg.replace('{%s}' % key, SYNTAX[key])
+        for rule, fixed, analyze, fix in rules:
+            difference = max(ceil(fixed * ALLOWED_DIFFERENCE), 0)
+            reg = '(?e)((?:%s){e<=%s})' % (rule, difference)
+
+            for i in range(len(SYNTAX)):
+                reg = reg.replace(SYNTAX[i][0], SYNTAX[i][1])
 
             r = regex.compile(reg)
-            regexes.append((r, ceil(2 * fixed / 10), func))
+            regexes.append((r, difference, analyze, fix))
 
         return regexes
 

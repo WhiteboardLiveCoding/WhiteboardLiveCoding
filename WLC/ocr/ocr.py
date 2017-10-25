@@ -45,5 +45,5 @@ class OCR(metaclass=Singleton):
         prediction = self.model.predict(char)
         sorted_preds = np.argsort(prediction, axis=1)[0]
 
-        res = [chr(self.mapping[(int(elem))]) for elem in sorted_preds][::-1]
-        return res[0], res[:7]
+        res = [(chr(self.mapping[(int(elem))]), prediction[0][elem]) for elem in sorted_preds][::-1]
+        return res[0][0], res[:7]
