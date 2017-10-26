@@ -23,29 +23,29 @@ class TrialCodeFixer:
         self.poss_lines = poss_lines
         self.context = []
 
-        SYNTAX.append(('VARIABLE', '[a-z]+[0-9]+'))
+        SYNTAX.append(('VARIABLE', '[a-z]+[0-9]*'))
         SYNTAX.append(('STATEMENT', '.*'))
         SYNTAX.append(('BOOLEAN', '.*'))
         SYNTAX.append(('PARAMETERS', '.*'))
 
         RULES.append(('import (.*)', 7, None, self.fix_import))
-        RULES.append(('def (VARIABLE)\((PARAMETERS)\):', 7, None, self.fix_def))
-        RULES.append(('class (VARIABLE):', 7, None, self.fix_class))
+        RULES.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
+        RULES.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
         RULES.append(('if (BOOLEAN):', 4, None, self.fix_if))
         RULES.append(('elif (BOOLEAN):', 6, None, self.fix_elif))
         RULES.append(('return (STATEMENT)', 7, None, self.fix_return))
         RULES.append(('while (BOOLEAN):', 7, None, self.fix_while))
-        RULES.append(('for (VARIABLE) in (STATEMENT):', 9, None, self.fix_for))
-        RULES.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, None, self.fix_for_range))
-        RULES.append(('(VARIABLE)\((STATEMENT)\)', 2, None, self.fix_function_call))
-        RULES.append(('(VARIABLE) = (STATEMENT)', 3, None, self.fix_assignment))
+        RULES.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
+        RULES.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
+        RULES.append(('(VARIABLE)\((STATEMENT)\)', 2, self.analyze_function_call, self.fix_function_call))
+        RULES.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
         RULES.append(('assert (STATEMENT)', 7, None, self.fix_assert))
         RULES.append(('del (STATEMENT)', 4, None, lambda _: self.fix_del))
         RULES.append(('raise (STATEMENT)', 6, None, self.fix_raise))
-        RULES.append(('pass', 4, None, lambda x, y: 'pass'))
-        RULES.append(('else:', 5, None, lambda x, y: 'else:'))
-        RULES.append(('break', 5, None, lambda x, y: 'break'))
-        RULES.append(('continue', 8, None, lambda x, y:'continue'))
+        RULES.append(('pass', 4, None, lambda x, y, z: 'pass'))
+        RULES.append(('else:', 5, None, lambda x, y, z: 'else:'))
+        RULES.append(('break', 5, None, lambda x, y,z: 'break'))
+        RULES.append(('continue', 8, None, lambda x, y, z: 'continue'))
         RULES.append(('(.*)', 0, None, lambda groups: '{}'.format(*groups[1:]))) # If nothing else works this will
 
     def fix(self):
@@ -59,15 +59,17 @@ class TrialCodeFixer:
         for i in range(len(poss_lines)):
             closest_matches.append(self.find_closest_match(poss_lines[i], regexes))
 
+        context = {'variables': [], 'functions': []}
+
         for i in range(len(closest_matches)):
             (match, analyze, _) = closest_matches[i]
 
             if analyze:
-                analyze(match.groups(), poss_lines[i])
+                analyze(match.groups(), poss_lines[i], context)
 
         for i in range(len(closest_matches)):
             (match, _, fix) = closest_matches[i]
-            fixed_lines.append(fix(match.groups(), poss_lines[i]))
+            fixed_lines.append(fix(match.groups(), poss_lines[i], context))
 
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
@@ -140,46 +142,66 @@ class TrialCodeFixer:
         pos = line.find(target)
         return poss_chars[pos:pos + len(target)]
 
-    def fix_import(self, groups, poss_chars):
+    def fix_import(self, groups, poss_chars, context):
         poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
         return 'import {}'.format(*groups[1:])
 
-    def fix_class(self, groups, poss_chars):
+    def analyze_class(self, groups, poss_chars, context):
+        context['functions'].append(groups[1])
+
+    def fix_class(self, groups, poss_chars, context):
         return 'class {}:'.format(*groups[1:])
 
-    def fix_if(self, groups, poss_chars):
+    def fix_if(self, groups, poss_chars, context):
         return 'if {}:'.format(*groups[1:])
 
-    def fix_elif(self, groups, poss_chars):
+    def fix_elif(self, groups, poss_chars, context):
         return 'elif {}:'.format(*groups[1:])
 
-    def fix_return(self, groups, poss_chars):
+    def fix_return(self, groups, poss_chars, context):
         return 'return {}'.format(*groups[1:])
 
-    def fix_while(self, groups, poss_chars):
+    def fix_while(self, groups, poss_chars, context):
         return 'while {}:'.format(*groups[1:])
 
-    def fix_for(self, groups, poss_chars):
+    def analyze_for(self, groups, poss_chars, context):
+        context['variables'].append(groups[1])
+
+    def fix_for(self, groups, poss_chars, context):
         return 'for {} in {}:'.format(*groups[1:])
 
-    def fix_for_range(self, groups, poss_chars):
+    def analyze_for_range(self, groups, poss_chars, context):
+        context['variables'].append(groups[1])
+
+    def fix_for_range(self, groups, poss_chars, context):
         return 'for {} in range({}):'.format(*groups[1:])
 
-    def fix_function_call(self, groups, poss_chars):
+    def analyze_function_call(self, groups, poss_chars, context):
+        context['functions'].extend(groups[1].split('.'))
+
+    def fix_function_call(self, groups, poss_chars, context):
         return '{}({})'.format(*groups[1:])
 
-    def fix_assignment(self, groups, poss_chars):
+    def analyze_assignment(self, groups, poss_chars, context):
+        context['variables'].append(groups[1])
+
+    def fix_assignment(self, groups, poss_chars, context):
         return '{} = {}'.format(*groups[1:])
 
-    def fix_assert(self, groups, poss_chars):
+    def fix_assert(self, groups, poss_chars, context):
         return 'assert {}'.format(*groups[1:])
 
-    def fix_del(self, groups, poss_chars):
+    def fix_del(self, groups, poss_chars, context):
         return 'del {}'.format(*groups[1:])
 
-    def fix_raise(self, groups, poss_chars):
+    def fix_raise(self, groups, poss_chars, context):
         return 'raise {}'.format(*groups[1:])
 
-    def fix_def(self, groups, poss_chars):
+    def analyze_def(self, groups, poss_chars, context):
+        context['functions'].append(groups[1])
+        variables = groups[2].split(',')
+        context['variables'].extend(variables)
+
+    def fix_def(self, groups, poss_chars, context):
         return 'def {}({}):'.format(*groups[1:])
