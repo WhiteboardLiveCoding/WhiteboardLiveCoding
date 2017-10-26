@@ -12,7 +12,6 @@ from WLC.code_fixing.static import get_functions
 RULES = list()
 SYNTAX = list()
 
-MINIMUM_PROBABILITY = 0.01
 PERMUTATION_LENGTH = 2
 ALLOWED_DIFFERENCE = 0.2
 
@@ -24,13 +23,13 @@ class TrialCodeFixer:
         self.poss_lines = poss_lines
         self.context = []
 
-        SYNTAX.append(('VARIABLE', '[a-z]\w*'))
+        SYNTAX.append(('VARIABLE', '[a-z]+[0-9]+'))
         SYNTAX.append(('STATEMENT', '.*'))
         SYNTAX.append(('BOOLEAN', '.*'))
         SYNTAX.append(('PARAMETERS', '.*'))
 
         RULES.append(('import (.*)', 7, None, self.fix_import))
-        RULES.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_defs, self.fix_def))
+        RULES.append(('def (VARIABLE)\((PARAMETERS)\):', 7, None, self.fix_def))
         RULES.append(('class (VARIABLE):', 7, None, self.fix_class))
         RULES.append(('if (BOOLEAN):', 4, None, self.fix_if))
         RULES.append(('elif (BOOLEAN):', 6, None, self.fix_elif))
@@ -43,76 +42,39 @@ class TrialCodeFixer:
         RULES.append(('assert (STATEMENT)', 7, None, self.fix_assert))
         RULES.append(('del (STATEMENT)', 4, None, lambda _: self.fix_del))
         RULES.append(('raise (STATEMENT)', 6, None, self.fix_raise))
-        RULES.append(('pass', 4, None, lambda _, **kwargs: 'pass'))
-        RULES.append(('else:', 5, None, lambda _, **kwargs: 'else:'))
-        RULES.append(('break', 5, None, lambda _, **kwargs: 'break'))
-        RULES.append(('continue', 8, None, lambda _, **kwargs: 'continue'))
-        RULES.append(('(.*)', 0, None, lambda groups, **kwargs: '{}'.format(*groups))) # If nothing else works this will
+        RULES.append(('pass', 4, None, lambda x, y: 'pass'))
+        RULES.append(('else:', 5, None, lambda x, y: 'else:'))
+        RULES.append(('break', 5, None, lambda x, y: 'break'))
+        RULES.append(('continue', 8, None, lambda x, y:'continue'))
+        RULES.append(('(.*)', 0, None, lambda groups: '{}'.format(*groups[1:]))) # If nothing else works this will
 
     def fix(self):
         poss_lines = self.poss_lines
         lines = self.code.splitlines()
         fixed_lines = list()
         closest_matches = list()
-        poss_lines_simplified = list()
 
-        for line, i in zip(lines, poss_lines):
-            joined = self.join_words(poss_lines[i])
-            simplified = self.reduce_line(joined)
-            poss_lines_simplified.append(simplified)
+        regexes = self.compile_regexes(RULES)
 
-            closest_matches.append(self.find_closest_match(simplified))
+        for i in range(len(poss_lines)):
+            closest_matches.append(self.find_closest_match(poss_lines[i], regexes))
 
-        context = {'functions': [], 'variables': []}
+        for i in range(len(closest_matches)):
+            (match, analyze, _) = closest_matches[i]
 
-        for (match, analyze, _) in closest_matches:
             if analyze:
-                context = analyze(match.groups()[1:], **context)
+                analyze(match.groups(), poss_lines[i])
 
         for i in range(len(closest_matches)):
             (match, _, fix) = closest_matches[i]
-
-            kwargs = {'poss_chars': poss_lines_simplified[i],
-                      'line': lines[i]}
-            kwargs.update(context)
-
-            fixed_lines.append(fix(match.groups()[1:], **kwargs))
+            fixed_lines.append(fix(match.groups(), poss_lines[i]))
 
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
-    def join_words(self, poss_lines):
-        joined = list()
-
-        for word in range(len(poss_lines)):
-            for j in range(len(poss_lines[word])):
-                joined.append(poss_lines[word][j])
-
-            if word < len(poss_lines) - 1:
-                joined.append([(' ', 1)])
-
-        return joined
-
-    def reduce_line(self, line):
-        reduced = list()
-
-        for possibilities in line:
-            lowered = map(lambda p: (p[0].lower(), p[1]), possibilities)
-            filtered = list(map(lambda c: c[0], filter(lambda c: c[1] > MINIMUM_PROBABILITY, lowered)))
-            deduped = self.remove_duplicate_predictions(filtered)
-            reduced.append(deduped)
-
-        return reduced
-
-    def remove_duplicate_predictions(self, seq):
-        seen = set()
-        seen_add = seen.add
-        return [x for x in seq if not (x in seen or seen_add(x))]
-
-    def find_closest_match(self, poss_line):
+    def find_closest_match(self, poss_line, regexes):
         distance = sys.maxsize
         closest = None
-        regexes = self.compile_regexes(RULES)
         permutations = self.permutations(poss_line)
 
         for r, fixed, analyze, fix in regexes:
@@ -158,7 +120,7 @@ class TrialCodeFixer:
 
         return regexes
 
-    def closest_match(self, poss_chars, possibilities):
+    def levenshtein_closest(self, poss_chars, possibilities):
         permutations = self.permutations(poss_chars)
         best = sys.maxsize
         recommended = None
@@ -178,54 +140,46 @@ class TrialCodeFixer:
         pos = line.find(target)
         return poss_chars[pos:pos + len(target)]
 
-    def fix_import(self, groups, **kwargs):
-        line = kwargs.get('line')
-        poss_chars = kwargs.get('poss_chars')[line.find(groups[0]):]
-        closest, _ = self.closest_match(poss_chars, stdlib_list("3.6"))
-        return 'import {}'.format(closest)
+    def fix_import(self, groups, poss_chars):
+        poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
+        closest, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
+        return 'import {}'.format(*groups[1:])
 
-    def fix_def(self, groups, **kwargs):
-        return 'def {}({}):'.format(*groups)
+    def fix_class(self, groups, poss_chars):
+        return 'class {}:'.format(*groups[1:])
 
-    def fix_class(self, groups, **kwargs):
-        return 'class {}:'.format(*groups)
+    def fix_if(self, groups, poss_chars):
+        return 'if {}:'.format(*groups[1:])
 
-    def fix_if(self, groups, **kwargs):
-        return 'if {}:'.format(*groups)
+    def fix_elif(self, groups, poss_chars):
+        return 'elif {}:'.format(*groups[1:])
 
-    def fix_elif(self, groups, **kwargs):
-        return 'elif {}:'.format(*groups)
+    def fix_return(self, groups, poss_chars):
+        return 'return {}'.format(*groups[1:])
 
-    def fix_else(self, groups, **kwargs):
-        return 'else:'
+    def fix_while(self, groups, poss_chars):
+        return 'while {}:'.format(*groups[1:])
 
-    def fix_return(self, groups, **kwargs):
-        return 'return {}'.format(*groups)
+    def fix_for(self, groups, poss_chars):
+        return 'for {} in {}:'.format(*groups[1:])
 
-    def fix_while(self, groups, **kwargs):
-        return 'while {}:'.format(*groups)
+    def fix_for_range(self, groups, poss_chars):
+        return 'for {} in range({}):'.format(*groups[1:])
 
-    def fix_for(self, groups, **kwargs):
-        return 'for {} in {}:'.format(*groups)
+    def fix_function_call(self, groups, poss_chars):
+        return '{}({})'.format(*groups[1:])
 
-    def fix_for_range(self, groups, **kwargs):
-        return 'for {} in range({}):'.format(*groups)
+    def fix_assignment(self, groups, poss_chars):
+        return '{} = {}'.format(*groups[1:])
 
-    def fix_function_call(self, groups, **kwargs):
-        return '{}({})'.format(*groups)
+    def fix_assert(self, groups, poss_chars):
+        return 'assert {}'.format(*groups[1:])
 
-    def fix_assignment(self, groups, **kwargs):
-        return '{} = {}'.format(*groups)
+    def fix_del(self, groups, poss_chars):
+        return 'del {}'.format(*groups[1:])
 
-    def fix_assert(self, group, **kwargs):
-        return 'assert {}'.format(*group)
+    def fix_raise(self, groups, poss_chars):
+        return 'raise {}'.format(*groups[1:])
 
-    def fix_del(self, group, **kwargs):
-        return 'del {}'.format(*group)
-
-    def fix_raise(self, group, **kwargs):
-        return 'raise {}'.format(*group)
-
-    def analyze_defs(self, group, **context):
-        context['functions'].append(group[0])
-        return context
+    def fix_def(self, groups, poss_chars):
+        return 'def {}({}):'.format(*groups[1:])
