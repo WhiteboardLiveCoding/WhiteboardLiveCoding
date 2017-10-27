@@ -17,5 +17,8 @@ class Preprocessor:
         gray_image = cv2.adaptiveThreshold(gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 115,
                                            60)
 
+        cv2.imshow('image', gray_image)
+        cv2.waitKey(0)
+
         extended_image.set_image(gray_image)
         return extended_image
