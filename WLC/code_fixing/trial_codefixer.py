@@ -46,7 +46,7 @@ class TrialCodeFixer:
         RULES.append(('else:', 5, None, lambda x, y, z: 'else:'))
         RULES.append(('break', 5, None, lambda x, y,z: 'break'))
         RULES.append(('continue', 8, None, lambda x, y, z: 'continue'))
-        RULES.append(('(.*)', 0, None, lambda groups: '{}'.format(*groups[1:]))) # If nothing else works this will
+        RULES.append(('(.*)', 0, None, lambda groups, x, y: '{}'.format(*groups[1:]))) # If nothing else works this will
 
     def fix(self):
         poss_lines = self.poss_lines
@@ -88,6 +88,9 @@ class TrialCodeFixer:
                         distance = sum(match.fuzzy_counts) - fixed
                         closest = (match, analyze, fix)
 
+                        if distance < 0:
+                            return closest
+
         return closest
 
     def permutations(self, poss_chars):
@@ -119,6 +122,8 @@ class TrialCodeFixer:
 
             r = regex.compile(reg)
             regexes.append((r, difference, analyze, fix))
+
+        regexes = sorted(regexes, key=lambda x: -x[1])
 
         return regexes
 
