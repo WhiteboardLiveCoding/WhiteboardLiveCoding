@@ -1,5 +1,6 @@
 import logging
 import sys
+import math
 
 import cv2
 import numpy as np
@@ -28,11 +29,10 @@ class Picture(ExtendedImage):
         return self._merge_code(lines)
 
     def _segment_image(self, gray_image):
-        img = self._prepare_for_contouring(gray_image)
-        sorted_ctrs = self._find_contours(img)
-
         lines = list()
+        img = self.get_contoured(gray_image)
 
+        sorted_ctrs = self._find_contours(img)
         sorted_ctrs = self._merge_subcontours(sorted_ctrs)
 
         # Get average height and width of all lines
@@ -47,12 +47,11 @@ class Picture(ExtendedImage):
             if width < (average_width * self.ARTIFACT_PERCENTAGE_THRESHOLD) or \
                height < (average_height * self.ARTIFACT_PERCENTAGE_THRESHOLD):
                 continue
-          
+
             roi = gray_image[y_axis:y_axis + height, x_axis:x_axis + width]
             mask = self._get_mask(img, sorted_ctrs, i)[y_axis:y_axis + height, x_axis:x_axis + width]
 
             result = cv2.bitwise_and(roi, roi, mask=mask)
-
             lines.append(Line(result, x_axis, y_axis, width, height, self.preferences))
 
         # Sort lines based on y offset
@@ -60,17 +59,15 @@ class Picture(ExtendedImage):
         LOGGER.debug("%d lines detected.", len(lines))
         return lines
 
-    def _prepare_for_contouring(self, gray_image):
-        kernel = np.ones((5, 20), np.uint8)
-        img = cv2.dilate(gray_image, kernel, iterations=1)
+    def average_node_distance(self, nodes):
+        distances = list(map(lambda n: math.sqrt(self.closest_node(n, nodes)), nodes))
+        return np.mean(distances), np.std(distances)
 
-        kernel = np.ones((8, 8), np.uint8)
-        img = cv2.erode(img, kernel, iterations=1)
-
-        kernel = np.ones((1, 100), np.uint8)
-        img = cv2.dilate(img, kernel, iterations=1)
-
-        return img
+    def closest_node(self, node, nodes):
+        nodes = np.asarray(nodes)
+        deltas = nodes - node
+        dist_2 = np.einsum('ij,ij->i', deltas, deltas)
+        return np.partition(dist_2, 1)[1]
 
     def _find_contours(self, img):
         im2, ctrs, hier = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -158,6 +155,35 @@ class Picture(ExtendedImage):
                 indentation = idx
 
         return indentation
+
+    def get_contoured(self, gray_image):
+        img = np.copy(gray_image)
+        sorted_ctrs = self._find_contours(img)
+
+        points = list()
+        used_contours = list()
+
+        for ctr in sorted_ctrs:
+            M = cv2.moments(ctr)
+
+            if M["m00"]:
+                cX = int((M["m10"] / M["m00"]))
+                cY = int(M["m01"] / M["m00"])
+                points.append((cX, cY))
+                used_contours.append(ctr)
+
+        average_distance, standard_deviation = self.average_node_distance(points)
+        horizontal_distance = int(1.5 * average_distance + 2 * standard_deviation)
+
+        for ctr, point in zip(used_contours, points):
+            x_axis, y_axis, width, height = cv2.boundingRect(ctr)
+            x_center, y_center = point[0], point[1]
+
+            minimum_height = min(y_center - y_axis, y_axis + height - y_center)
+
+            cv2.rectangle(img, (x_center - horizontal_distance, y_center - minimum_height), (x_center + horizontal_distance, y_center + minimum_height), (255, 255, 255), -1)
+
+        return img
 
     def _merge_subcontours(self, sorted_ctrs):
         merged = list()
