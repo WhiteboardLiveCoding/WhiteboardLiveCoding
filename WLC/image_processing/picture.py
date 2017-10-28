@@ -59,20 +59,6 @@ class Picture(ExtendedImage):
         LOGGER.debug("%d lines detected.", len(lines))
         return lines
 
-    def average_node_distance(self, nodes):
-        distances = list(map(lambda n: math.sqrt(self.closest_node(n, nodes)), nodes))
-        return np.mean(distances), np.std(distances)
-
-    def closest_node(self, node, nodes):
-        nodes = np.asarray(nodes)
-        deltas = nodes - node
-        dist_2 = np.einsum('ij,ij->i', deltas, deltas)
-        return np.partition(dist_2, 1)[1]
-
-    def _find_contours(self, img):
-        im2, ctrs, hier = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        return sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
-
     def _get_mask(self, img, contours, contour_index):
         mask = np.zeros_like(img)
         cv2.drawContours(mask, contours, contour_index, 255, -1)
@@ -158,20 +144,8 @@ class Picture(ExtendedImage):
 
     def get_contoured(self, gray_image):
         img = np.copy(gray_image)
-        sorted_ctrs = self._find_contours(img)
 
-        points = list()
-        used_contours = list()
-
-        for ctr in sorted_ctrs:
-            M = cv2.moments(ctr)
-
-            if M["m00"]:
-                cX = int((M["m10"] / M["m00"]))
-                cY = int(M["m01"] / M["m00"])
-                points.append((cX, cY))
-                used_contours.append(ctr)
-
+        points, used_contours = self.get_center_points(gray_image)
         average_distance, standard_deviation = self.average_node_distance(points)
         horizontal_distance = int(1.5 * average_distance + 2 * standard_deviation)
 
@@ -179,9 +153,15 @@ class Picture(ExtendedImage):
             x_axis, y_axis, width, height = cv2.boundingRect(ctr)
             x_center, y_center = point[0], point[1]
 
-            minimum_height = min(y_center - y_axis, y_axis + height - y_center)
+            minimum_height = round(0.9 * min(y_center - y_axis, y_axis + height - y_center))
 
-            cv2.rectangle(img, (x_center - horizontal_distance, y_center - minimum_height), (x_center + horizontal_distance, y_center + minimum_height), (255, 255, 255), -1)
+            cv2.rectangle(
+                img,
+                (x_center - horizontal_distance, y_center - minimum_height),
+                (x_center + horizontal_distance, y_center + minimum_height),
+                (255, 255, 255),
+                -1
+            )
 
         return img
 
