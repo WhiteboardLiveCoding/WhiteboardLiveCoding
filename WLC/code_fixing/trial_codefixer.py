@@ -49,6 +49,12 @@ class TrialCodeFixer:
         RULES.append(('(.*)', 0, None, lambda groups, x, y: '{}'.format(*groups[1:]))) # If nothing else works this will
 
     def fix(self):
+        """
+        Main function to be called which finds the closest regex match for each line, extracts context variables and
+        function names and then attempts to fix typos.
+
+        :return: Fixed version of the code
+        """
         poss_lines = self.poss_lines
         lines = self.code.splitlines()
         fixed_lines = list()
@@ -75,6 +81,13 @@ class TrialCodeFixer:
                          zip(self.indents, fixed_lines))
 
     def find_closest_match(self, poss_line, regexes):
+        """
+        Finds the closest regex to the line provided looking at possible permutations of characters.
+
+        :param poss_line: Possible characters that make up the line. Type: [[Char]]
+        :param regexes: Compiled list of regexes
+        :return: The closest match and the functions used to analyze and fix the line
+        """
         distance = sys.maxsize
         closest = None
         permutations = self.permutations(poss_line)
@@ -94,6 +107,13 @@ class TrialCodeFixer:
         return closest
 
     def permutations(self, poss_chars):
+        """
+        Finds the most probable permutations of the line. Complexity is reduced by the fact that there are only 1 or 2
+        possibilities of a character.
+
+        :param poss_chars: Possible characters that make up the line
+        :return: Possible ways to write the line returned as a list of strings
+        """
         if not poss_chars:
             return ['']
 
@@ -107,6 +127,13 @@ class TrialCodeFixer:
         return results
 
     def compile_regexes(self, rules):
+        """
+        Compiles the list of regexes replacing keywords in the rules by the syntax expressions. Syntax expressions can
+        also refer to other expressions that were listed before them because they get expanded.
+
+        :param rules: List of rules that should get compiled into syntax expressions
+        :return: Compiled list of regexes
+        """
         regexes = list()
 
         for i in range(len(SYNTAX)):
@@ -128,6 +155,15 @@ class TrialCodeFixer:
         return regexes
 
     def levenshtein_closest(self, poss_chars, possibilities):
+        """
+        Finds one of the possible strings which is closest to a permutation of a line or part of a line. This is fairly
+        expensive when there are a lot of possibilities and permutations.
+
+        :param poss_chars: Possible characters to make up all of the permutations of the line/substring
+        :param possibilities: Possible strings which should be matched to the closest permutation
+        :return: The closest possibility to the provided line/substring and the levenshtein distance
+        """
+
         permutations = self.permutations(poss_chars)
         best = sys.maxsize
         recommended = None
@@ -144,6 +180,16 @@ class TrialCodeFixer:
         return recommended, best
 
     def extract_poss_chars(self, line, poss_chars, target):
+        """
+        Finds a substring(target) in a line and extracts the possible characters for that substring from the possible
+        characters for the whole line. This should be used when calling levenshtein_closest or find_closest_match
+        on a substring of a line.
+
+        :param line: A line of text
+        :param poss_chars: Possible characters that make up the line
+        :param target: Target substring which should be extracted
+        :return: Possible characters that make up the substring
+        """
         pos = line.find(target)
         return poss_chars[pos:pos + len(target)]
 
