@@ -43,8 +43,8 @@ class ExtendedImage:
     def get_center_points(self, gray_image):
         sorted_ctrs = self._find_contours(gray_image)
 
-        points = list()
-        used_contours = list()
+        points = []
+        used_contours = []
 
         for ctr in sorted_ctrs:
             M = cv2.moments(ctr)
@@ -62,7 +62,7 @@ class ExtendedImage:
         return sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
     def average_node_distance(self, nodes):
-        distances = list(map(lambda n: math.sqrt(self.closest_node(n, nodes)), nodes))
+        distances = [math.sqrt(self.closest_node(n, nodes)) for n in nodes]
         return np.mean(distances), np.std(distances)
 
     def closest_node(self, node, nodes):

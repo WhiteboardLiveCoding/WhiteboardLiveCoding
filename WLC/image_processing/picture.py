@@ -1,6 +1,5 @@
 import logging
 import sys
-import math
 
 import cv2
 import numpy as np
@@ -29,7 +28,7 @@ class Picture(ExtendedImage):
         return self._merge_code(lines)
 
     def _segment_image(self, gray_image):
-        lines = list()
+        lines = []
         img = self.get_contoured(gray_image)
 
         sorted_ctrs = self._find_contours(img)
@@ -88,8 +87,8 @@ class Picture(ExtendedImage):
         if not lines:
             return []
 
-        indents = list()
-        indent_locations = list()
+        indents = []
+        indent_locations = []
 
         indents.append(0)
         indent_locations.append([lines[0].get_x()])
@@ -166,7 +165,7 @@ class Picture(ExtendedImage):
         return img
 
     def _merge_subcontours(self, sorted_ctrs):
-        merged = list()
+        merged = []
         for i, ctr in enumerate(sorted_ctrs):
             x1, y1, width1, height1 = cv2.boundingRect(ctr)
 
