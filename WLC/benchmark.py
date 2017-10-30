@@ -5,6 +5,7 @@ import os
 from os.path import isfile, join
 
 from WLC.code_fixing.codefixer import CodeFixer
+from WLC.code_fixing.trial_codefixer import TrialCodeFixer
 from WLC.image_processing.camera import Camera
 from WLC.image_processing.preprocessor import Preprocessor
 
@@ -32,7 +33,12 @@ def benchmark_file(file_name):
     image = Preprocessor().process(picture)
     code, indents, poss_lines = image.get_code()
     code = code.lower()
-    fixed_code = CodeFixer(code, indents, poss_lines).fix()
+
+    if 'sign' not in file_name:
+        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
+        # fixed_code = CodeFixer(code, indents, poss_lines).fix()
+    else:
+        fixed_code = code
 
     difference = editdistance.eval("".join(code.split()), "".join(expected_code.split()))
     difference_fixed = editdistance.eval("".join(fixed_code.split()), "".join(expected_code.split()))

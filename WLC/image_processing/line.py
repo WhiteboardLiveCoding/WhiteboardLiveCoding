@@ -75,4 +75,16 @@ class Line(ExtendedImage):
             word_variances[idx] = poss_chars
             coded_words.append(code_word)
 
-        return " ".join(coded_words), word_variances
+        return " ".join(coded_words), self.join_words(word_variances)
+
+    def join_words(self, poss_lines):
+        joined = list()
+
+        for word in range(len(poss_lines)):
+            for j in range(len(poss_lines[word])):
+                joined.append(poss_lines[word][j])
+
+            if word < len(poss_lines) - 1:
+                joined.append([' '])
+
+        return joined

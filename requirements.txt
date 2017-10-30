@@ -10,3 +10,5 @@ keras
 h5py
 docker
 pytest
+regex
+stdlib_list

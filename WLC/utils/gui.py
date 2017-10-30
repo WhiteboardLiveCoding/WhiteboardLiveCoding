@@ -3,6 +3,7 @@ from os.path import dirname
 from tkinter import filedialog
 from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
 from WLC.code_fixing.codefixer import CodeFixer
+from WLC.code_fixing.trial_codefixer import TrialCodeFixer
 from WLC.image_processing.preprocessor import Preprocessor
 
 
@@ -26,7 +27,7 @@ class Gui(tk.Frame):
         image = Preprocessor().process(picture)
         code, indents, poss_lines = image.get_code()
         code = code.lower()
-        fixed_code = CodeFixer(code, indents, poss_lines).fix()
+        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
         value = str(code_executor.execute_code(fixed_code))
         self.display_ocr(fixed_code)
         self.display_output(value)
