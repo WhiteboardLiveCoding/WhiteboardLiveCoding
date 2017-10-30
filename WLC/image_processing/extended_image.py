@@ -1,4 +1,5 @@
 import logging
+import math
 
 import cv2
 import numpy as np
@@ -38,6 +39,37 @@ class ExtendedImage:
 
     def get_width(self):
         return self._width
+
+    def get_center_points(self, gray_image):
+        sorted_ctrs = self._find_contours(gray_image)
+
+        points = []
+        used_contours = []
+
+        for ctr in sorted_ctrs:
+            M = cv2.moments(ctr)
+
+            if M["m00"]:
+                cX = int((M["m10"] / M["m00"]))
+                cY = int(M["m01"] / M["m00"])
+                points.append((cX, cY))
+                used_contours.append(ctr)
+
+        return points, used_contours
+
+    def _find_contours(self, img):
+        im2, ctrs, hier = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        return sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
+
+    def average_node_distance(self, nodes):
+        distances = [math.sqrt(self.closest_node(n, nodes)) for n in nodes]
+        return np.mean(distances), np.std(distances)
+
+    def closest_node(self, node, nodes):
+        nodes = np.asarray(nodes)
+        deltas = nodes - node
+        dist_2 = np.einsum('ij,ij->i', deltas, deltas)
+        return np.partition(dist_2, 1)[1]
 
     def get_code(self):
         """Get the code from the current image. This may require recursively checking child elements."""

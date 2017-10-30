@@ -28,11 +28,10 @@ class Picture(ExtendedImage):
         return self._merge_code(lines)
 
     def _segment_image(self, gray_image):
-        img = self._prepare_for_contouring(gray_image)
+        lines = []
+        img = self.get_contoured(gray_image)
+
         sorted_ctrs = self._find_contours(img)
-
-        lines = list()
-
         sorted_ctrs = self._merge_subcontours(sorted_ctrs)
 
         # Get average height and width of all lines
@@ -47,34 +46,17 @@ class Picture(ExtendedImage):
             if width < (average_width * self.ARTIFACT_PERCENTAGE_THRESHOLD) or \
                height < (average_height * self.ARTIFACT_PERCENTAGE_THRESHOLD):
                 continue
-          
+
             roi = gray_image[y_axis:y_axis + height, x_axis:x_axis + width]
             mask = self._get_mask(img, sorted_ctrs, i)[y_axis:y_axis + height, x_axis:x_axis + width]
 
             result = cv2.bitwise_and(roi, roi, mask=mask)
-
             lines.append(Line(result, x_axis, y_axis, width, height, self.preferences))
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())
         LOGGER.debug("%d lines detected.", len(lines))
         return lines
-
-    def _prepare_for_contouring(self, gray_image):
-        kernel = np.ones((5, 20), np.uint8)
-        img = cv2.dilate(gray_image, kernel, iterations=1)
-
-        kernel = np.ones((8, 8), np.uint8)
-        img = cv2.erode(img, kernel, iterations=1)
-
-        kernel = np.ones((1, 100), np.uint8)
-        img = cv2.dilate(img, kernel, iterations=1)
-
-        return img
-
-    def _find_contours(self, img):
-        im2, ctrs, hier = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        return sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
     def _get_mask(self, img, contours, contour_index):
         mask = np.zeros_like(img)
@@ -105,8 +87,8 @@ class Picture(ExtendedImage):
         if not lines:
             return []
 
-        indents = list()
-        indent_locations = list()
+        indents = []
+        indent_locations = []
 
         indents.append(0)
         indent_locations.append([lines[0].get_x()])
@@ -159,8 +141,31 @@ class Picture(ExtendedImage):
 
         return indentation
 
+    def get_contoured(self, gray_image):
+        img = np.copy(gray_image)
+
+        points, used_contours = self.get_center_points(gray_image)
+        average_distance, standard_deviation = self.average_node_distance(points)
+        horizontal_distance = int(1.5 * average_distance + 2 * standard_deviation)
+
+        for ctr, point in zip(used_contours, points):
+            x_axis, y_axis, width, height = cv2.boundingRect(ctr)
+            x_center, y_center = point[0], point[1]
+
+            minimum_height = round(0.9 * min(y_center - y_axis, y_axis + height - y_center))
+
+            cv2.rectangle(
+                img,
+                (x_center - horizontal_distance, y_center - minimum_height),
+                (x_center + horizontal_distance, y_center + minimum_height),
+                (255, 255, 255),
+                -1
+            )
+
+        return img
+
     def _merge_subcontours(self, sorted_ctrs):
-        merged = list()
+        merged = []
         for i, ctr in enumerate(sorted_ctrs):
             x1, y1, width1, height1 = cv2.boundingRect(ctr)
 

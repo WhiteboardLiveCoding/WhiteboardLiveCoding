@@ -64,13 +64,13 @@ def run_benchmarks():
         total_accuracy_fixed += accuracy_fixed * length
         total_length += length
 
-    overall_accuracy = round(total_accuracy / total_length)
-    overall_accuracy_fixed = round(total_accuracy_fixed / total_length)
+    overall_accuracy = round(total_accuracy / total_length, 2)
+    overall_accuracy_fixed = round(total_accuracy_fixed / total_length, 2)
 
     LOGGER.info('')
     LOGGER.info('Overall Accuracy w/o fix: %s%%', overall_accuracy)
     LOGGER.info('Overall Accuracy w/ fix: %s%%', overall_accuracy_fixed)
-    LOGGER.info('Fix improvement: %s%%', overall_accuracy_fixed - overall_accuracy)
+    LOGGER.info('Fix improvement: %s%%', round(overall_accuracy_fixed - overall_accuracy, 2))
     LOGGER.info('Code length: %s', total_length)
 
     return overall_accuracy_fixed

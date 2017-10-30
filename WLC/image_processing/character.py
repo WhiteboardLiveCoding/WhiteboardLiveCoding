@@ -3,6 +3,7 @@ import logging
 import os
 from math import floor, ceil
 
+import numpy as np
 import cv2
 from os.path import isfile, join, dirname
 
@@ -77,22 +78,41 @@ class Character(ExtendedImage):
         done so that we can use neural networks to figure out the letter
         """
         LOGGER.debug("Resizing character to fit to standard.")
-        res = self._resize()
 
-        # cv2.imshow('resized', img)
-        # cv2.waitKey(0)
+        res = self._image_blurring(self.get_image())
+        res = self._resize(res)
+        res = self._dilate_small_characters(res)
 
         if self.preferences and self.preferences.annotate:
             self._annotate(res)
 
         return res
 
-    def _resize(self):
+    def _image_blurring(self,img):
+        return cv2.GaussianBlur(img, (5, 5), 0)
+
+    def _dilate_small_characters(self, img):
+        img_copy = img.copy()
+        sorted_ctrs = self._find_contours(img_copy)
+        current_crts = sorted_ctrs
+        count = 0
+
+        while len(sorted_ctrs) >= len(current_crts) > 0:
+            count += 1
+            kernel = np.ones((2, 2), np.uint8)
+            img_copy = cv2.erode(img_copy, kernel, iterations=1)
+            current_crts = self._find_contours(img_copy)
+
+        if count < 3:
+            kernel = np.ones((2, 2), np.uint8)
+            return cv2.dilate(img, kernel, iterations=1)
+        else:
+            return img
+
+    def _resize(self, img):
         """
         Re-sizes the image into 28x28px without stretching and pads the image with black border.
         """
-        img = self.get_image()
-
         maximum_dimension = max(self.get_width(), self.get_height())
 
         top = floor((maximum_dimension - self.get_height()) / 2)

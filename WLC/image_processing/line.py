@@ -9,6 +9,8 @@ from WLC.image_processing.word import Word
 
 LOGGER = logging.getLogger()
 
+HEIGHT_DILATION_MODIFIER = 1.5
+WIDTH_DILATION_MODIFIER = 0.75
 
 class Line(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
@@ -24,8 +26,13 @@ class Line(ExtendedImage):
         return self._merge_code(words)
 
     def _segment_image(self):
+        points, used_contours = self.get_center_points(self.get_image())
+        average_distance, standard_deviation = self.average_node_distance(points)
+        height = int(average_distance * HEIGHT_DILATION_MODIFIER)
+        width = int(average_distance * WIDTH_DILATION_MODIFIER)
+
         # dilation
-        kernel = np.ones((20, 20), np.uint8)
+        kernel = np.ones((height, width), np.uint8)
         img = cv2.dilate(self.get_image(), kernel, iterations=1)
 
         # find contours
