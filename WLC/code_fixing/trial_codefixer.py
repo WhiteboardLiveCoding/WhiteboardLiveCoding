@@ -1,6 +1,6 @@
 import sys
 import editdistance
-import builtins
+import logging
 
 from math import ceil
 from stdlib_list import stdlib_list
@@ -14,6 +14,8 @@ SYNTAX = list()
 
 PERMUTATION_LENGTH = 2
 ALLOWED_DIFFERENCE = 0.2
+
+LOGGER = logging.getLogger()
 
 
 class TrialCodeFixer:
@@ -55,24 +57,30 @@ class TrialCodeFixer:
 
         :return: Fixed version of the code
         """
+        LOGGER.debug('Starting code fixing.')
+
         poss_lines = self.poss_lines
         lines = self.code.splitlines()
         fixed_lines = list()
         closest_matches = list()
 
+        LOGGER.debug('Compiling main rules.')
         regexes = self.compile_regexes(RULES)
 
+        LOGGER.debug('Looking for closest matches.')
         for i in range(len(poss_lines)):
             closest_matches.append(self.find_closest_match(poss_lines[i], regexes))
 
         context = {'variables': [], 'functions': []}
 
+        LOGGER.debug('Analyzing lines.')
         for i in range(len(closest_matches)):
             (match, analyze, _) = closest_matches[i]
 
             if analyze:
                 analyze(match.groups(), poss_lines[i], context)
 
+        LOGGER.debug('Fixing lines.')
         for i in range(len(closest_matches)):
             (match, _, fix) = closest_matches[i]
             fixed_lines.append(fix(match.groups(), poss_lines[i], context))
@@ -123,6 +131,8 @@ class TrialCodeFixer:
         for char in poss_chars[0][:PERMUTATION_LENGTH]:
             for permutation in permutations:
                 results.append(char + permutation)
+
+        LOGGER.debug('Trying %s permutations', len(permutations))
 
         return results
 
