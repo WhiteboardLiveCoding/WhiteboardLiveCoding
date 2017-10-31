@@ -1,3 +1,4 @@
+import logging
 import sys
 import editdistance
 import builtins
@@ -9,11 +10,13 @@ import regex
 
 from WLC.code_fixing.static import get_functions
 
-RULES = list()
-SYNTAX = list()
+RULES = []
+SYNTAX = []
 
 PERMUTATION_LENGTH = 2
 ALLOWED_DIFFERENCE = 0.2
+
+LOGGER = logging.getLogger()
 
 
 class TrialCodeFixer:
@@ -21,14 +24,24 @@ class TrialCodeFixer:
         self.code = code
         self.indents = indents
         self.poss_lines = poss_lines
-        self.context = []
+        self.context = {'variables': [], 'functions': [], 'classes': [], 'imports': [], 'methods': {}}
 
-        SYNTAX.append(('VARIABLE', '[a-z]+[0-9]*'))
+        SYNTAX.append(('VARIABLE', '[a-z_]\w*'))
+        SYNTAX.append(('FUNCTION', '[a-z_]\w*'))
+
+        SYNTAX.append(('DECLARED_VARIABLE', '|'.join(self.context['variables'])))
+        SYNTAX.append(('DECLARED_FUNCTION', '|'.join(self.context['functions'])))
+
         SYNTAX.append(('STATEMENT', '.*'))
         SYNTAX.append(('BOOLEAN', '.*'))
         SYNTAX.append(('PARAMETERS', '.*'))
 
+        # RULES: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
+        # analysis -> goes over result and gets any context var
+        # fix_func -> fixes the str with context var
         RULES.append(('import (.*)', 7, None, self.fix_import))
+        RULES.append(('import (.*?) as (.*)', 11, None, self.fix_import_as))
+        RULES.append(('from (.*?) import (.*?)(, .*?)*', 13, None, self.fix_from_import))
         RULES.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
         RULES.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
         RULES.append(('if (BOOLEAN):', 4, None, self.fix_if))
@@ -37,16 +50,17 @@ class TrialCodeFixer:
         RULES.append(('while (BOOLEAN):', 7, None, self.fix_while))
         RULES.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
         RULES.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
-        RULES.append(('(VARIABLE)\((STATEMENT)\)', 2, self.analyze_function_call, self.fix_function_call))
+        RULES.append(('(DECLARED_FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
+        RULES.append(('(DECLARED_VARIABLE)\.(DECLARED_FUNCTION)\((STATEMENT)\)', 3, None, self.fix_method_call))
         RULES.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
         RULES.append(('assert (STATEMENT)', 7, None, self.fix_assert))
         RULES.append(('del (STATEMENT)', 4, None, lambda _: self.fix_del))
         RULES.append(('raise (STATEMENT)', 6, None, self.fix_raise))
-        RULES.append(('pass', 4, None, lambda x, y, z: 'pass'))
-        RULES.append(('else:', 5, None, lambda x, y, z: 'else:'))
-        RULES.append(('break', 5, None, lambda x, y,z: 'break'))
-        RULES.append(('continue', 8, None, lambda x, y, z: 'continue'))
-        RULES.append(('(.*)', 0, None, lambda groups, x, y: '{}'.format(*groups[1:]))) # If nothing else works this will
+        RULES.append(('pass', 4, None, lambda x, y: 'pass'))
+        RULES.append(('else:', 5, None, lambda x, y: 'else:'))
+        RULES.append(('break', 5, None, lambda x, y: 'break'))
+        RULES.append(('continue', 8, None, lambda x, y: 'continue'))
+        RULES.append(('(.*)', 0, None, None))  # If nothing else works this will
 
     def fix(self):
         """
@@ -55,27 +69,28 @@ class TrialCodeFixer:
 
         :return: Fixed version of the code
         """
-        poss_lines = self.poss_lines
-        lines = self.code.splitlines()
-        fixed_lines = list()
-        closest_matches = list()
+        fixed_lines = []
+        closest_matches = []
 
         regexes = self.compile_regexes(RULES)
 
-        for i in range(len(poss_lines)):
-            closest_matches.append(self.find_closest_match(poss_lines[i], regexes))
+        for i in range(len(self.poss_lines)):  # range loop OK because of indexing type
+            closest_matches.append(self.find_closest_match(self.poss_lines[i], regexes))
 
-        context = {'variables': [], 'functions': []}
+        for idx, closest_match in enumerate(closest_matches):
+            (match, analyze_func, _) = closest_match
 
-        for i in range(len(closest_matches)):
-            (match, analyze, _) = closest_matches[i]
+            if analyze_func:
+                analyze_func(match.groups(), self.poss_lines[idx])
 
-            if analyze:
-                analyze(match.groups(), poss_lines[i], context)
-
-        for i in range(len(closest_matches)):
-            (match, _, fix) = closest_matches[i]
-            fixed_lines.append(fix(match.groups(), poss_lines[i], context))
+        for idx, closest_match in enumerate(closest_matches):
+            (match, _, fix_func) = closest_match
+            if fix_func:
+                fixed_lines.append(fix_func(match.groups(), self.poss_lines[idx]))
+            else:
+                groups = match.groups()
+                LOGGER.debug("No match found for {}. Defaulting to not fixing.".format(*groups[1:]))
+                fixed_lines.append('{}'.format(*groups[1:]))
 
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
@@ -97,6 +112,7 @@ class TrialCodeFixer:
                 match = r.match(possible)
 
                 if match:
+                    # use fuzzy counts here
                     if sum(match.fuzzy_counts) - fixed < distance:
                         distance = sum(match.fuzzy_counts) - fixed
                         closest = (match, analyze, fix)
@@ -117,7 +133,7 @@ class TrialCodeFixer:
         if not poss_chars:
             return ['']
 
-        results = list()
+        results = []
         permutations = self.permutations(poss_chars[1:])
 
         for char in poss_chars[0][:PERMUTATION_LENGTH]:
@@ -134,7 +150,7 @@ class TrialCodeFixer:
         :param rules: List of rules that should get compiled into syntax expressions
         :return: Compiled list of regexes
         """
-        regexes = list()
+        regexes = []
 
         for i in range(len(SYNTAX)):
             for j in range(i):
@@ -174,7 +190,7 @@ class TrialCodeFixer:
 
                 if distance == 0:
                     return possibility, 0
-                elif best > distance:
+                elif distance < best:
                     recommended = possibility
                     best = distance
         return recommended, best
@@ -193,66 +209,123 @@ class TrialCodeFixer:
         pos = line.find(target)
         return poss_chars[pos:pos + len(target)]
 
-    def fix_import(self, groups, poss_chars, context):
+    # ANALYSE
+    def analyze_class(self, groups, poss_chars):
+        LOGGER.debug("Analysing class. Adding {} to context.".format(groups[1]))
+        self.context['classes'].append(groups[1])
+
+    def analyze_for_range(self, groups, poss_chars):
+        LOGGER.debug("Analysing range. Adding {} to context.".format(groups[1]))
+        self.context['variables'].append(groups[1])
+
+    def analyze_for(self, groups, poss_chars):
+        LOGGER.debug("Analysing for. Adding {} to context.".format(groups[1]))
+        self.context['variables'].append(groups[1])
+
+    def analyze_assignment(self, groups, poss_chars):
+        LOGGER.debug("Analysing assignment. Adding {} to context.".format(groups[1]))
+        self.context['variables'].append(groups[1])
+
+    def analyze_def(self, groups, poss_chars):
+        LOGGER.debug("Analysing function def. Adding {} to context.".format(groups[1]))
+        self.context['functions'].append(groups[1])
+        variables = groups[2].split(',')
+        LOGGER.debug("Analysing function def variables. Adding {} to context.".format(variables))
+        self.context['variables'].extend(variables)
+
+    # FIX
+    def fix_import(self, groups, poss_chars):
         poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
-        return 'import {}'.format(*groups[1:])
+        LOGGER.debug("Fixing import. Adding {} to context after analysis.".format(closest))
+        self.context["imports"].append(closest)
+        return 'import {}'.format(closest)
 
-    def analyze_class(self, groups, poss_chars, context):
-        context['functions'].append(groups[1])
+    def fix_import_as(self, groups, poss_chars):
+        poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
+        closest_module, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
+        LOGGER.debug("Fixing import as. Adding {} to context after analysis.".format(groups[2]))
+        self.context["imports"].append(groups[2])
+        return 'import {} as {}'.format(closest_module, groups[2])
 
-    def fix_class(self, groups, poss_chars, context):
-        return 'class {}:'.format(*groups[1:])
+    def fix_from_import(self, groups, poss_chars):
+        poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
+        closest_module, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
+        LOGGER.debug("Fixing from X import Y. Adding {} to context after analysis.".format(closest_module))
+        for imported in groups[1:]:
+            self.context["imports"].append(imported)
+        return 'from {} import {}'.format(closest_module, ", ".join(groups[1:]))
 
-    def fix_if(self, groups, poss_chars, context):
+    def fix_class(self, groups, poss_chars):
+        poss_class = self.extract_poss_chars(groups[0], poss_chars, groups[1])
+        closest, _ = self.levenshtein_closest(poss_class, self.context["classes"])
+        LOGGER.debug("Fixing class. Changing from {} to {}.".format(groups[1], closest))
+
+        return 'class {}:'.format(closest)
+
+    def fix_if(self, groups, poss_chars):
+        LOGGER.debug("Fixing if. Using {}.".format(*groups[1:]))
         return 'if {}:'.format(*groups[1:])
 
-    def fix_elif(self, groups, poss_chars, context):
+    def fix_elif(self, groups, poss_chars):
+        LOGGER.debug("Fixing elif. Using {}.".format(*groups[1:]))
         return 'elif {}:'.format(*groups[1:])
 
-    def fix_return(self, groups, poss_chars, context):
+    def fix_return(self, groups, poss_chars):
+        LOGGER.debug("Fixing return. Using {}.".format(*groups[1:]))
         return 'return {}'.format(*groups[1:])
 
-    def fix_while(self, groups, poss_chars, context):
+    def fix_while(self, groups, poss_chars):
+        LOGGER.debug("Fixing while. Using {}.".format(*groups[1:]))
         return 'while {}:'.format(*groups[1:])
 
-    def analyze_for(self, groups, poss_chars, context):
-        context['variables'].append(groups[1])
-
-    def fix_for(self, groups, poss_chars, context):
+    def fix_for(self, groups, poss_chars):
+        LOGGER.debug("Fixing for. Using {} and {}.".format(*groups[1:]))
         return 'for {} in {}:'.format(*groups[1:])
 
-    def analyze_for_range(self, groups, poss_chars, context):
-        context['variables'].append(groups[1])
-
-    def fix_for_range(self, groups, poss_chars, context):
+    def fix_for_range(self, groups, poss_chars):
+        LOGGER.debug("Fixing for range. Using {} and {}.".format(*groups[1:]))
         return 'for {} in range({}):'.format(*groups[1:])
 
-    def analyze_function_call(self, groups, poss_chars, context):
-        context['functions'].extend(groups[1].split('.'))
+    def fix_function_call(self, groups, poss_chars):
+        # TODO: check poss_chars. if possible method call by checking if starts with known var followed by . followed by method name
 
-    def fix_function_call(self, groups, poss_chars, context):
-        return '{}({})'.format(*groups[1:])
+        poss_func = self.extract_poss_chars(groups[0], poss_chars, groups[1])
+        closest, _ = self.levenshtein_closest(poss_func, self.context["functions"])
+        LOGGER.debug("Fixing func call. Using {} and {}.".format(*(closest, *groups[2:])))
+        return '{}({})'.format(closest, *groups[2:])
 
-    def analyze_assignment(self, groups, poss_chars, context):
-        context['variables'].append(groups[1])
+    def fix_method_call(self, groups, poss_chars):
+        poss_var = self.extract_poss_chars(groups[0], poss_chars, groups[1])
+        closest_var, _ = self.levenshtein_closest(poss_var, self.context["variables"])
 
-    def fix_assignment(self, groups, poss_chars, context):
+        poss_method = self.extract_poss_chars(groups[0], poss_chars, groups[2])
+        closest_method, _ = self.levenshtein_closest(poss_method, self.context["methods"])
+
+        closests_args = [
+            self.levenshtein_closest(poss_arg, self.context["variables"])[0] for poss_arg
+            in (self.extract_poss_chars(groups[0], poss_chars, group) for group in groups[3:])
+        ]
+        LOGGER.debug("Fixing method call. Using {}.".format(*(closest_var, closest_method, closests_args, *groups[2:])))
+
+        return '{}.{}({})'.format(closest_var, closest_method, *closests_args)
+
+    def fix_assignment(self, groups, poss_chars):
+        LOGGER.debug("Fixing assignment. Using {} = {}.".format(*groups[1:]))
         return '{} = {}'.format(*groups[1:])
 
-    def fix_assert(self, groups, poss_chars, context):
+    def fix_assert(self, groups, poss_chars):
+        LOGGER.debug("Fixing assert. Using {}.".format(*groups[1:]))
         return 'assert {}'.format(*groups[1:])
 
-    def fix_del(self, groups, poss_chars, context):
+    def fix_del(self, groups, poss_chars):
+        LOGGER.debug("Fixing del. Using {}.".format(*groups[1:]))
         return 'del {}'.format(*groups[1:])
 
-    def fix_raise(self, groups, poss_chars, context):
+    def fix_raise(self, groups, poss_chars):
+        LOGGER.debug("Fixing raise. Using {}.".format(*groups[1:]))
         return 'raise {}'.format(*groups[1:])
 
-    def analyze_def(self, groups, poss_chars, context):
-        context['functions'].append(groups[1])
-        variables = groups[2].split(',')
-        context['variables'].extend(variables)
-
-    def fix_def(self, groups, poss_chars, context):
+    def fix_def(self, groups, poss_chars):
+        LOGGER.debug("Fixing def. Using {} and {}.".format(*groups[1:]))
         return 'def {}({}):'.format(*groups[1:])
