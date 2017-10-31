@@ -56,7 +56,7 @@ class Line(ExtendedImage):
                 min_y, max_y = self._truncate_black_borders(roi)
                 roi = roi[min_y:max_y]
 
-                words.append(Word(roi, x_axis, y_axis, width, max_y - min_y, self.preferences))
+                words.append(Word(roi, x_axis, y_axis, width, max_y - min_y, average_distance, self.preferences))
                 previous_x = x_axis
 
         LOGGER.debug("%d words detected in this line.", len(words))
