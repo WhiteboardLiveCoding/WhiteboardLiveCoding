@@ -161,7 +161,7 @@ class TrialCodeFixer:
             reg = '(?e)((?:%s){e<=%s})' % (rule, difference)
 
             for i in range(len(SYNTAX)):
-                reg = reg.replace(SYNTAX[i][0], SYNTAX[i][1])
+                reg = reg.replace('({})'.format(SYNTAX[i][0]), '({})'.format(SYNTAX[i][1]))
 
             r = regex.compile(reg)
             regexes.append((r, difference, analyze, fix))
