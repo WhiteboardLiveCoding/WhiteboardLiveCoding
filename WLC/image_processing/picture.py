@@ -17,6 +17,7 @@ class Picture(ExtendedImage):
 
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
+        self.indentation_threshold = self.INDENTATION_THRESHOLD
 
         if self.preferences and self.preferences.show_pic:
             cv2.imshow("Full picture", image)
@@ -51,7 +52,9 @@ class Picture(ExtendedImage):
             mask = self._get_mask(img, sorted_ctrs, i)[y_axis:y_axis + height, x_axis:x_axis + width]
 
             result = cv2.bitwise_and(roi, roi, mask=mask)
-            lines.append(Line(result, x_axis, y_axis, width, height, self.preferences))
+
+            if len(self._find_contours(result)) >= 2:
+                lines.append(Line(result, x_axis, y_axis, width, height, self.preferences))
 
         # Sort lines based on y offset
         lines = sorted(lines, key=lambda line: line.get_y())
@@ -119,13 +122,13 @@ class Picture(ExtendedImage):
         """
         Returns whether this line is indented less than the currently least indented line.
         """
-        return line.get_x() < np.mean(indent_locations[0]) - self.INDENTATION_THRESHOLD
+        return line.get_x() < np.mean(indent_locations[0]) - self.indentation_threshold
 
     def _is_after_last_indent(self, line, indent_locations):
         """
         Returns whether this line is indented further than the currently most indented line.
         """
-        return line.get_x() > np.mean(indent_locations[-1]) + self.INDENTATION_THRESHOLD
+        return line.get_x() > np.mean(indent_locations[-1]) + self.indentation_threshold
 
     def _get_closest_indentation(self, line, indent_locations):
         """
@@ -146,6 +149,8 @@ class Picture(ExtendedImage):
 
         points, used_contours = self.get_center_points(gray_image)
         average_distance, standard_deviation = self.average_node_distance(points)
+
+        self.indentation_threshold = average_distance
         horizontal_distance = int(1.5 * average_distance + 2 * standard_deviation)
 
         for ctr, point in zip(used_contours, points):
