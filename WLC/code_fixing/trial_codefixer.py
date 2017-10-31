@@ -24,7 +24,7 @@ class TrialCodeFixer:
         self.code = code
         self.indents = indents
         self.poss_lines = poss_lines
-        self.context = {'variables': [], 'functions': [], 'classes': [], 'imports': [], 'methods': {}}
+        self.context = {'variables': [], 'functions': get_functions(), 'classes': [], 'imports': [], 'methods': {}}
 
         SYNTAX.append(('VARIABLE', '[a-z_]\w*'))
         SYNTAX.append(('FUNCTION', '[a-z_]\w*'))
