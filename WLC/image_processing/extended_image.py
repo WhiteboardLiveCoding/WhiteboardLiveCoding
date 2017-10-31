@@ -60,8 +60,9 @@ class ExtendedImage:
         moment = cv2.moments(ctr)
 
         if moment["m00"]:
-            cX = moment["m10"] // moment["m00"]
-            cY = moment["m01"] // moment["m00"]
+            cX = int(moment["m10"] // moment["m00"])
+            cY = int(moment["m01"] // moment["m00"])
+
             return cX, cY
 
         return None
