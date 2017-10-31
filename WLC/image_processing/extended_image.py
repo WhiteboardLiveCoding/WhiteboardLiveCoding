@@ -1,5 +1,6 @@
 import logging
 import math
+import sys
 
 import cv2
 import numpy as np
@@ -47,21 +48,32 @@ class ExtendedImage:
         used_contours = []
 
         for ctr in sorted_ctrs:
-            M = cv2.moments(ctr)
+            point = self._get_center_of_contour(ctr)
 
-            if M["m00"]:
-                cX = int((M["m10"] / M["m00"]))
-                cY = int(M["m01"] / M["m00"])
-                points.append((cX, cY))
+            if point:
+                points.append(point)
                 used_contours.append(ctr)
 
         return points, used_contours
+
+    def _get_center_of_contour(self, ctr):
+        moment = cv2.moments(ctr)
+
+        if moment["m00"]:
+            cX = int((moment["m10"] / moment["m00"]))
+            cY = int(moment["m01"] / moment["m00"])
+            return cX, cY
+
+        return None
 
     def _find_contours(self, img):
         im2, ctrs, hier = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return sorted(ctrs, key=lambda ctr: cv2.boundingRect(ctr)[0])
 
     def average_node_distance(self, nodes):
+        if len(nodes) < 2:
+            return 0, 0
+
         distances = [math.sqrt(self.closest_node(n, nodes)) for n in nodes]
         return np.mean(distances), np.std(distances)
 

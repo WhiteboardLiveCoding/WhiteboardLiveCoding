@@ -13,6 +13,7 @@ environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 MINIMUM_PROBABILITY = 0.01
 
+
 class OCR(metaclass=Singleton):
 
     def __init__(self):
