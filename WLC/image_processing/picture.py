@@ -61,11 +61,6 @@ class Picture(ExtendedImage):
         LOGGER.debug("%d lines detected.", len(lines))
         return lines
 
-    def _get_mask(self, img, contours, contour_index):
-        mask = np.zeros_like(img)
-        cv2.drawContours(mask, contours, contour_index, 255, -1)
-        return mask
-
     def _merge_code(self, lines):
         """
         Should return a string with the code from all of the lines, this function will also have to figure out how far

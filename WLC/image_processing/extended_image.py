@@ -124,6 +124,11 @@ class ExtendedImage:
 
         return min_y, len(results) - max_y
 
+    def _get_mask(self, img, contours, contour_index):
+        mask = np.zeros_like(img)
+        cv2.drawContours(mask, contours, contour_index, 255, -1)
+        return mask
+
 
 class Preferences:
     def __init__(self, show_pic=False, show_line=False, show_word=False, show_char=False, annotate=False):
