@@ -7,14 +7,13 @@ from WLC.image_processing.extended_image import ExtendedImage
 
 LOGGER = logging.getLogger()
 
-CHARACTER_SEPARATION = 5
-CHARACTER_DIMENSION = 5
 MAXIMUM_OVERLAP = 0.5
 
 
 class Word(ExtendedImage):
-    def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
+    def __init__(self, image, x_axis, y_axis, width, height, average_distance, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
+        self.average_distance = average_distance
 
         if self.preferences and self.preferences.show_word:
             cv2.imshow("Word", image)
@@ -37,15 +36,16 @@ class Word(ExtendedImage):
 
         for i, ctr in enumerate(sorted_ctrs):
             x_axis, y_axis, width, height = cv2.boundingRect(ctr)
+            center = self._get_center_of_contour(ctr)
 
-            if self._should_be_separated(previous_x, previous_width, x_axis, height, width):
+            if center and self._should_be_separated(previous_x, previous_width, center[0], height, width):
                 roi = self.get_image()[0:self.get_height(), x_axis:x_axis + width]
 
                 min_y, max_y = self._truncate_black_borders(roi)
                 roi = roi[min_y:max_y]
 
                 characters.append(Character(roi, x_axis, y_axis, width, max_y - min_y, self.preferences))
-                previous_x = x_axis
+                previous_x = center[0]
                 previous_width = width
 
         LOGGER.debug("%d characters found in this word.", len(characters))
@@ -78,7 +78,11 @@ class Word(ExtendedImage):
         return "".join(coded_chars), char_variances
 
     def _should_be_separated(self, previous_x, previous_width, x_axis, height, width):
-        separate = height * width > CHARACTER_DIMENSION ** 2 and abs(x_axis - previous_x) > CHARACTER_SEPARATION
+        dimension_of_character = self.average_distance / 8
+        minimum_distance_between_characters = self.average_distance / 4
+
+        separate = height * width > dimension_of_character ** 2 and \
+                   abs(x_axis - previous_x) > minimum_distance_between_characters
 
         if not separate:
             return False

@@ -12,6 +12,7 @@ LOGGER = logging.getLogger()
 HEIGHT_DILATION_MODIFIER = 1.5
 WIDTH_DILATION_MODIFIER = 0.75
 
+
 class Line(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
@@ -28,6 +29,7 @@ class Line(ExtendedImage):
     def _segment_image(self):
         points, used_contours = self.get_center_points(self.get_image())
         average_distance, standard_deviation = self.average_node_distance(points)
+
         height = int(average_distance * HEIGHT_DILATION_MODIFIER)
         width = int(average_distance * WIDTH_DILATION_MODIFIER)
 
@@ -56,7 +58,7 @@ class Line(ExtendedImage):
                 min_y, max_y = self._truncate_black_borders(roi)
                 roi = roi[min_y:max_y]
 
-                words.append(Word(roi, x_axis, y_axis, width, max_y - min_y, self.preferences))
+                words.append(Word(roi, x_axis, y_axis, width, max_y - min_y, average_distance, self.preferences))
                 previous_x = x_axis
 
         LOGGER.debug("%d words detected in this line.", len(words))

@@ -14,10 +14,10 @@ from WLC.ocr.ocr import OCR
 
 # the MNIST standard image size.
 STD_IMAGE_SIZE = 28
-LOGGER = logging.getLogger()
 
 LOWEST_ALLOWED_CHAR = 33
 HIGHEST_ALLOWED_CHAR = 126
+MAXIMUM_EROSIONS = 3
 
 
 class Character(ExtendedImage):
@@ -77,7 +77,6 @@ class Character(ExtendedImage):
         The image should be transformed into standard width and height (eg. 28px - the MNIST standard size). This is
         done so that we can use neural networks to figure out the letter
         """
-        LOGGER.debug("Resizing character to fit to standard.")
 
         res = self._image_blurring(self.get_image())
         res = self._resize(res)
@@ -97,13 +96,13 @@ class Character(ExtendedImage):
         current_crts = sorted_ctrs
         count = 0
 
-        while len(sorted_ctrs) >= len(current_crts) > 0:
+        while len(sorted_ctrs) >= len(current_crts) > 0 and count <= MAXIMUM_EROSIONS:
             count += 1
             kernel = np.ones((2, 2), np.uint8)
             img_copy = cv2.erode(img_copy, kernel, iterations=1)
             current_crts = self._find_contours(img_copy)
 
-        if count < 3:
+        if count < MAXIMUM_EROSIONS:
             kernel = np.ones((2, 2), np.uint8)
             return cv2.dilate(img, kernel, iterations=1)
         else:

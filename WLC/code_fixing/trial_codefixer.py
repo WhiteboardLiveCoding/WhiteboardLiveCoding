@@ -1,7 +1,7 @@
 import logging
 import sys
 import editdistance
-import builtins
+import logging
 
 from math import ceil
 from stdlib_list import stdlib_list
@@ -69,20 +69,27 @@ class TrialCodeFixer:
 
         :return: Fixed version of the code
         """
+        LOGGER.debug('Starting code fixing.')
+
         fixed_lines = []
         closest_matches = []
 
+        LOGGER.debug('Compiling main rules.')
         regexes = self.compile_regexes(RULES)
+
+        LOGGER.debug('Looking for closest matches.')
 
         for i in range(len(self.poss_lines)):  # range loop OK because of indexing type
             closest_matches.append(self.find_closest_match(self.poss_lines[i], regexes))
 
+        LOGGER.debug('Analyzing lines.')
         for idx, closest_match in enumerate(closest_matches):
             (match, analyze_func, _) = closest_match
 
             if analyze_func:
                 analyze_func(match.groups(), self.poss_lines[idx])
 
+        LOGGER.debug('Fixing lines.')
         for idx, closest_match in enumerate(closest_matches):
             (match, _, fix_func) = closest_match
             if fix_func:
@@ -139,6 +146,8 @@ class TrialCodeFixer:
         for char in poss_chars[0][:PERMUTATION_LENGTH]:
             for permutation in permutations:
                 results.append(char + permutation)
+
+        LOGGER.debug('Trying %s permutations', len(permutations))
 
         return results
 
