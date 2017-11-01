@@ -12,3 +12,4 @@ docker
 pytest
 regex
 stdlib_list
+Flask
