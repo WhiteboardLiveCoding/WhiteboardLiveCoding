@@ -28,14 +28,9 @@ class TrialCodeFixer:
         self.syntax.append(('VARIABLE', '[a-z_]\w*'))
         self.syntax.append(('FUNCTION', '[a-z_]\w*'))
 
-        self.syntax.append(('DECLARED_VARIABLE', '|'.join(self.context['variables'])))
-        self.syntax.append(('DECLARED_FUNCTION', '|'.join(self.context['functions'])))
-        self.syntax.append(('DECLARED_METHODS', '|'.join(self.context['methods'])))
-
         self.syntax.append(('STATEMENT', '.*'))
         self.syntax.append(('BOOLEAN', '.*'))
         self.syntax.append(('PARAMETERS', '.*'))
-
         # self.rules: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
         # analysis -> goes over result and gets any context var
         # fix_func -> fixes the str with context var
@@ -50,8 +45,8 @@ class TrialCodeFixer:
         self.rules.append(('while (BOOLEAN):', 7, None, self.fix_while))
         self.rules.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
         self.rules.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
-        self.rules.append(('(DECLARED_FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
-        self.rules.append(('(DECLARED_VARIABLE)\.(DECLARED_METHODS)\((STATEMENT)\)', 3, None, self.fix_method_call))
+        self.rules.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
+        self.rules.append(('(VARIABLE)\.(FUNCTION)\((STATEMENT)\)', 3, None, self.fix_method_call))
         self.rules.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
         self.rules.append(('assert (STATEMENT)', 7, None, self.fix_assert))
         self.rules.append(('del (STATEMENT)', 4, None, self.fix_del))
@@ -84,8 +79,6 @@ class TrialCodeFixer:
 
             if analyze_func:
                 analyze_func(match.groups(), i)
-                # TODO: only recompile changed regexes
-                regexes = self.compile_regexes(self.rules)  # RE-compile regexes
 
             # At each line, check if currently in a class declaration.
             if self.indents[i] < self.class_indent and self.in_class:
@@ -171,7 +164,7 @@ class TrialCodeFixer:
 
         for rule, fixed, analyze, fix in rules:
             difference = max(ceil(fixed * ALLOWED_DIFFERENCE), 0)
-            reg = '(?e)((?:%s){e<=%s})' % (rule, difference)
+            reg = '^(?e)((?:%s){e<=%s})$' % (rule, difference)
 
             for i in range(len(self.syntax)):
                 reg = reg.replace('({})'.format(self.syntax[i][0]), '({})'.format(self.syntax[i][1]))
@@ -183,23 +176,24 @@ class TrialCodeFixer:
 
         return regexes
 
-    def levenshtein_closest(self, poss_chars, possibilities):
+    def levenshtein_closest(self, poss_chars, possibilities, allowed_difference=ALLOWED_DIFFERENCE):
         """
         Finds one of the possible strings which is closest to a permutation of a line or part of a line. This is fairly
         expensive when there are a lot of possibilities and permutations.
 
         :param poss_chars: Possible characters to make up all of the permutations of the line/substring
         :param possibilities: Possible strings which should be matched to the closest permutation
+        :param allowed_difference: Maximum percentage difference between closest match and one possibility
         :return: The closest possibility to the provided line/substring and the levenshtein distance
         """
 
         permutations = self.permutations(poss_chars)
-        best = sys.maxsize
-        recommended = None
+        best = allowed_difference
+        recommended = permutations[0]
 
         for permutation in permutations:
             for possibility in possibilities:
-                distance = editdistance.eval(permutation, possibility)
+                distance = editdistance.eval(permutation, possibility) / len(possibility)
 
                 if distance == 0:
                     return possibility, 0
@@ -252,7 +246,6 @@ class TrialCodeFixer:
         LOGGER.debug("Analysing function def variables. Adding {} to context.".format(variables))
         self.context['variables'].extend(variables)
 
-    # FIX
     def fix_import(self, groups, poss_chars):
         poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
@@ -279,7 +272,6 @@ class TrialCodeFixer:
         poss_class = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_class, self.context["classes"])
         LOGGER.debug("Fixing class. Changing from {} to {}.".format(groups[1], closest))
-
         return 'class {}:'.format(closest)
 
     def fix_if(self, groups, poss_chars):
@@ -307,8 +299,6 @@ class TrialCodeFixer:
         return 'for {} in range({}):'.format(*groups[1:])
 
     def fix_function_call(self, groups, poss_chars):
-        # TODO: check poss_chars. if possible method call by checking if starts with known var followed by . followed by method name
-
         poss_func = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_func, self.context["functions"])
         LOGGER.debug("Fixing func call. Using {} and {}.".format(*(closest, *groups[2:])))
