@@ -1,12 +1,10 @@
 import logging
 import sys
-import editdistance
-import logging
-
 from math import ceil
-from stdlib_list import stdlib_list
 
+import editdistance
 import regex
+from stdlib_list import stdlib_list
 
 from WLC.code_fixing.static import get_functions
 
@@ -80,14 +78,15 @@ class TrialCodeFixer:
         LOGGER.debug('Looking for closest matches.')
 
         for i in range(len(self.poss_lines)):  # range loop OK because of indexing type
-            closest_matches.append(self.find_closest_match(self.poss_lines[i], regexes))
-
-        LOGGER.debug('Analyzing lines.')
-        for idx, closest_match in enumerate(closest_matches):
+            closest_match = self.find_closest_match(self.poss_lines[i], regexes)
             (match, analyze_func, _) = closest_match
 
             if analyze_func:
-                analyze_func(match.groups(), self.poss_lines[idx])
+                analyze_func(match.groups(), self.poss_lines[i])
+                # TODO: only recompile changed regexes
+                regexes = self.compile_regexes(RULES)  # RE-compile regexes
+
+            closest_matches.append(closest_match)
 
         LOGGER.debug('Fixing lines.')
         for idx, closest_match in enumerate(closest_matches):
