@@ -3,10 +3,7 @@ import logging
 import tkinter as tk
 
 from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
-from WLC.code_fixing.codefixer import CodeFixer
-from WLC.code_fixing.trial_codefixer import TrialCodeFixer
 from WLC.image_processing.camera import Camera
-from WLC.image_processing.preprocessor import Preprocessor
 from WLC.utils.formatting import FORMAT
 from WLC.utils.gui import Gui
 
@@ -77,15 +74,7 @@ def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_
         app.mainloop()
 
     else:
-        code_executor = CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT)
-        image = Preprocessor().process(picture)
-        code, indents, poss_lines = image.get_code()  # TODO: use poss_lines variations to fix code
-        code = code.lower()
-
-        LOGGER.info("Unfixed code: \n%s\n", code)
-
-        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
-        code_executor.execute_code(fixed_code)
+        CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT).execute_code(picture)
 
 
 if __name__ == '__main__':

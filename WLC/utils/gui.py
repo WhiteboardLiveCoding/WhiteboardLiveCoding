@@ -2,9 +2,6 @@ import tkinter as tk
 from os.path import dirname
 from tkinter import filedialog
 from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
-from WLC.code_fixing.codefixer import CodeFixer
-from WLC.code_fixing.trial_codefixer import TrialCodeFixer
-from WLC.image_processing.preprocessor import Preprocessor
 
 
 class Gui(tk.Frame):
@@ -23,28 +20,31 @@ class Gui(tk.Frame):
 
     # Execute code and display text field accordingly
     def execute_code(self, picture):
-        code_executor = CodeExecutor(self.docker_ip, DEFAULT_DOCKER_PORT)
-        image = Preprocessor().process(picture)
-        code, indents, poss_lines = image.get_code()
-        code = code.lower()
-        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
-        value = str(code_executor.execute_code(fixed_code))
-        self.display_ocr(fixed_code)
-        self.display_output(value)
+        unfixed_code, fixed_code, result, error = CodeExecutor(self.docker_ip, DEFAULT_DOCKER_PORT).execute_code(picture)
+        self.display_ocr(unfixed_code, fixed_code)
+        self.display_output(result, error)
 
     # Set up text field for OCR output
-    def display_ocr(self, code):
+    def display_ocr(self, unfixed_code, fixed_code):
         text = tk.Text(self.master, height=14, width=70)
         text.pack(side=tk.LEFT, fill=tk.Y)
-        text.insert(tk.INSERT, "CODE READ BY OCR : \n")
-        text.insert(tk.END, code)
+        text.insert(tk.INSERT, "UNFIXED CODE READ BY OCR: \n")
+        text.insert(tk.END, unfixed_code)
+
+        text.insert(tk.INSERT, "\nCODE AFTER FIXING: \n")
+        text.insert(tk.END, fixed_code)
 
     # Set up text field for code execution output
-    def display_output(self, code):
+    def display_output(self, result, error):
         text = tk.Text(self.master, height=14, width=70)
         text.pack(side=tk.RIGHT, fill=tk.Y)
-        text.insert(tk.INSERT, "CODE EXECUTED : \n")
-        text.insert(tk.END, code)
+
+        if error:
+            text.insert(tk.INSERT, "PROGRAM ERROR: \n")
+            text.insert(tk.END, result)
+        else:
+            text.insert(tk.INSERT, "PROGRAM OUTPUT: \n")
+            text.insert(tk.END, result)
 
     # Get filename of the picture to be open
     def get_picture(self):
