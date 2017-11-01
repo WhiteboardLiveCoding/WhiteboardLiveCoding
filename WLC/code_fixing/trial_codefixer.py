@@ -22,13 +22,16 @@ class TrialCodeFixer:
         self.code = code
         self.indents = indents
         self.poss_lines = poss_lines
-        self.context = {'variables': [], 'functions': get_functions(), 'classes': [], 'imports': [], 'methods': {}}
+        self.context = {'variables': [], 'functions': get_functions(), 'classes': [], 'imports': [], 'methods': []}
+        self.in_class = False
+        self.class_indent = 0
 
         SYNTAX.append(('VARIABLE', '[a-z_]\w*'))
         SYNTAX.append(('FUNCTION', '[a-z_]\w*'))
 
         SYNTAX.append(('DECLARED_VARIABLE', '|'.join(self.context['variables'])))
         SYNTAX.append(('DECLARED_FUNCTION', '|'.join(self.context['functions'])))
+        SYNTAX.append(('DECLARED_METHODS', '|'.join(self.context['methods'])))
 
         SYNTAX.append(('STATEMENT', '.*'))
         SYNTAX.append(('BOOLEAN', '.*'))
@@ -49,10 +52,10 @@ class TrialCodeFixer:
         RULES.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
         RULES.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
         RULES.append(('(DECLARED_FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
-        RULES.append(('(DECLARED_VARIABLE)\.(DECLARED_FUNCTION)\((STATEMENT)\)', 3, None, self.fix_method_call))
+        RULES.append(('(DECLARED_VARIABLE)\.(DECLARED_METHODS)\((STATEMENT)\)', 3, None, self.fix_method_call))
         RULES.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
         RULES.append(('assert (STATEMENT)', 7, None, self.fix_assert))
-        RULES.append(('del (STATEMENT)', 4, None, lambda _: self.fix_del))
+        RULES.append(('del (STATEMENT)', 4, None, self.fix_del))
         RULES.append(('raise (STATEMENT)', 6, None, self.fix_raise))
         RULES.append(('pass', 4, None, lambda x, y: 'pass'))
         RULES.append(('else:', 5, None, lambda x, y: 'else:'))
@@ -76,15 +79,18 @@ class TrialCodeFixer:
         regexes = self.compile_regexes(RULES)
 
         LOGGER.debug('Looking for closest matches.')
-
         for i in range(len(self.poss_lines)):  # range loop OK because of indexing type
             closest_match = self.find_closest_match(self.poss_lines[i], regexes)
             (match, analyze_func, _) = closest_match
 
             if analyze_func:
-                analyze_func(match.groups(), self.poss_lines[i])
+                analyze_func(match.groups(), i)
                 # TODO: only recompile changed regexes
                 regexes = self.compile_regexes(RULES)  # RE-compile regexes
+
+            # At each line, check if currently in a class declaration.
+            if self.indents[i] < self.class_indent and self.in_class:
+                self.in_class = False
 
             closest_matches.append(closest_match)
 
@@ -218,25 +224,31 @@ class TrialCodeFixer:
         return poss_chars[pos:pos + len(target)]
 
     # ANALYSE
-    def analyze_class(self, groups, poss_chars):
+    def analyze_class(self, groups, line_n):
         LOGGER.debug("Analysing class. Adding {} to context.".format(groups[1]))
         self.context['classes'].append(groups[1])
+        self.in_class = True
+        self.class_indent = self.indents[line_n]
 
-    def analyze_for_range(self, groups, poss_chars):
+    def analyze_for_range(self, groups, line_n):
         LOGGER.debug("Analysing range. Adding {} to context.".format(groups[1]))
         self.context['variables'].append(groups[1])
 
-    def analyze_for(self, groups, poss_chars):
+    def analyze_for(self, groups, line_n):
         LOGGER.debug("Analysing for. Adding {} to context.".format(groups[1]))
         self.context['variables'].append(groups[1])
 
-    def analyze_assignment(self, groups, poss_chars):
+    def analyze_assignment(self, groups, line_n):
         LOGGER.debug("Analysing assignment. Adding {} to context.".format(groups[1]))
         self.context['variables'].append(groups[1])
 
-    def analyze_def(self, groups, poss_chars):
+    def analyze_def(self, groups, line_n):
         LOGGER.debug("Analysing function def. Adding {} to context.".format(groups[1]))
-        self.context['functions'].append(groups[1])
+        # differentiate between functions and class methods
+        if self.indents[line_n] <= self.class_indent and self.in_class:
+            self.context['methods'].append(groups[1])
+        else:
+            self.context['functions'].append(groups[1])
         variables = groups[2].split(',')
         LOGGER.debug("Analysing function def variables. Adding {} to context.".format(variables))
         self.context['variables'].extend(variables)
