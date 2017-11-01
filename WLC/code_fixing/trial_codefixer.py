@@ -8,9 +8,6 @@ from stdlib_list import stdlib_list
 
 from WLC.code_fixing.static import get_functions
 
-RULES = []
-SYNTAX = []
-
 PERMUTATION_LENGTH = 2
 ALLOWED_DIFFERENCE = 0.2
 
@@ -25,43 +22,45 @@ class TrialCodeFixer:
         self.context = {'variables': [], 'functions': get_functions(), 'classes': [], 'imports': [], 'methods': []}
         self.in_class = False
         self.class_indent = 0
+        self.syntax = []
+        self.rules = []
 
-        SYNTAX.append(('VARIABLE', '[a-z_]\w*'))
-        SYNTAX.append(('FUNCTION', '[a-z_]\w*'))
+        self.syntax.append(('VARIABLE', '[a-z_]\w*'))
+        self.syntax.append(('FUNCTION', '[a-z_]\w*'))
 
-        SYNTAX.append(('DECLARED_VARIABLE', '|'.join(self.context['variables'])))
-        SYNTAX.append(('DECLARED_FUNCTION', '|'.join(self.context['functions'])))
-        SYNTAX.append(('DECLARED_METHODS', '|'.join(self.context['methods'])))
+        self.syntax.append(('DECLARED_VARIABLE', '|'.join(self.context['variables'])))
+        self.syntax.append(('DECLARED_FUNCTION', '|'.join(self.context['functions'])))
+        self.syntax.append(('DECLARED_METHODS', '|'.join(self.context['methods'])))
 
-        SYNTAX.append(('STATEMENT', '.*'))
-        SYNTAX.append(('BOOLEAN', '.*'))
-        SYNTAX.append(('PARAMETERS', '.*'))
+        self.syntax.append(('STATEMENT', '.*'))
+        self.syntax.append(('BOOLEAN', '.*'))
+        self.syntax.append(('PARAMETERS', '.*'))
 
-        # RULES: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
+        # self.rules: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
         # analysis -> goes over result and gets any context var
         # fix_func -> fixes the str with context var
-        RULES.append(('import (.*)', 7, None, self.fix_import))
-        RULES.append(('import (.*?) as (.*)', 11, None, self.fix_import_as))
-        RULES.append(('from (.*?) import (.*?)(, .*?)*', 13, None, self.fix_from_import))
-        RULES.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
-        RULES.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
-        RULES.append(('if (BOOLEAN):', 4, None, self.fix_if))
-        RULES.append(('elif (BOOLEAN):', 6, None, self.fix_elif))
-        RULES.append(('return (STATEMENT)', 7, None, self.fix_return))
-        RULES.append(('while (BOOLEAN):', 7, None, self.fix_while))
-        RULES.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
-        RULES.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
-        RULES.append(('(DECLARED_FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
-        RULES.append(('(DECLARED_VARIABLE)\.(DECLARED_METHODS)\((STATEMENT)\)', 3, None, self.fix_method_call))
-        RULES.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
-        RULES.append(('assert (STATEMENT)', 7, None, self.fix_assert))
-        RULES.append(('del (STATEMENT)', 4, None, self.fix_del))
-        RULES.append(('raise (STATEMENT)', 6, None, self.fix_raise))
-        RULES.append(('pass', 4, None, lambda x, y: 'pass'))
-        RULES.append(('else:', 5, None, lambda x, y: 'else:'))
-        RULES.append(('break', 5, None, lambda x, y: 'break'))
-        RULES.append(('continue', 8, None, lambda x, y: 'continue'))
-        RULES.append(('(.*)', 0, None, None))  # If nothing else works this will
+        self.rules.append(('import (.*)', 7, None, self.fix_import))
+        self.rules.append(('import (.*?) as (.*)', 11, None, self.fix_import_as))
+        self.rules.append(('from (.*?) import (.*?)(, .*?)*', 13, None, self.fix_from_import))
+        self.rules.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
+        self.rules.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
+        self.rules.append(('if (BOOLEAN):', 4, None, self.fix_if))
+        self.rules.append(('elif (BOOLEAN):', 6, None, self.fix_elif))
+        self.rules.append(('return (STATEMENT)', 7, None, self.fix_return))
+        self.rules.append(('while (BOOLEAN):', 7, None, self.fix_while))
+        self.rules.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
+        self.rules.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
+        self.rules.append(('(DECLARED_FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
+        self.rules.append(('(DECLARED_VARIABLE)\.(DECLARED_METHODS)\((STATEMENT)\)', 3, None, self.fix_method_call))
+        self.rules.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
+        self.rules.append(('assert (STATEMENT)', 7, None, self.fix_assert))
+        self.rules.append(('del (STATEMENT)', 4, None, self.fix_del))
+        self.rules.append(('raise (STATEMENT)', 6, None, self.fix_raise))
+        self.rules.append(('pass', 4, None, lambda x, y: 'pass'))
+        self.rules.append(('else:', 5, None, lambda x, y: 'else:'))
+        self.rules.append(('break', 5, None, lambda x, y: 'break'))
+        self.rules.append(('continue', 8, None, lambda x, y: 'continue'))
+        self.rules.append(('(.*)', 0, None, None))  # If nothing else works this will
 
     def fix(self):
         """
@@ -76,7 +75,7 @@ class TrialCodeFixer:
         closest_matches = []
 
         LOGGER.debug('Compiling main rules.')
-        regexes = self.compile_regexes(RULES)
+        regexes = self.compile_regexes(self.rules)
 
         LOGGER.debug('Looking for closest matches.')
         for i in range(len(self.poss_lines)):  # range loop OK because of indexing type
@@ -86,7 +85,7 @@ class TrialCodeFixer:
             if analyze_func:
                 analyze_func(match.groups(), i)
                 # TODO: only recompile changed regexes
-                regexes = self.compile_regexes(RULES)  # RE-compile regexes
+                regexes = self.compile_regexes(self.rules)  # RE-compile regexes
 
             # At each line, check if currently in a class declaration.
             if self.indents[i] < self.class_indent and self.in_class:
@@ -166,16 +165,16 @@ class TrialCodeFixer:
         """
         regexes = []
 
-        for i in range(len(SYNTAX)):
+        for i in range(len(self.syntax)):
             for j in range(i):
-                SYNTAX[i] = (SYNTAX[i][0], SYNTAX[i][1].replace(SYNTAX[j][0], SYNTAX[j][1]))
+                self.syntax[i] = (self.syntax[i][0], self.syntax[i][1].replace(self.syntax[j][0], self.syntax[j][1]))
 
         for rule, fixed, analyze, fix in rules:
             difference = max(ceil(fixed * ALLOWED_DIFFERENCE), 0)
             reg = '(?e)((?:%s){e<=%s})' % (rule, difference)
 
-            for i in range(len(SYNTAX)):
-                reg = reg.replace('({})'.format(SYNTAX[i][0]), '({})'.format(SYNTAX[i][1]))
+            for i in range(len(self.syntax)):
+                reg = reg.replace('({})'.format(self.syntax[i][0]), '({})'.format(self.syntax[i][1]))
 
             r = regex.compile(reg)
             regexes.append((r, difference, analyze, fix))
