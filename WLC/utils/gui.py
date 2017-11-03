@@ -15,7 +15,7 @@ class Gui(tk.Frame):
     def init_button(self):
         self.master.title("GUI")
         self.pack(fill=tk.BOTH, expand=1, side=tk.BOTTOM)
-        quit_button = tk.Button(self.master, text="Execute", command=lambda: self.execute_code(self.picture))
+        quit_button = tk.Button(self.master, text="EXECUTE", command=lambda: self.execute_code(self.picture))
         quit_button.pack(side=tk.TOP)
 
     # Execute code and display text field accordingly
@@ -26,24 +26,26 @@ class Gui(tk.Frame):
 
     # Set up text field for OCR output
     def display_ocr(self, unfixed_code, fixed_code):
-        text = tk.Text(self.master, height=14, width=70)
-        text.pack(side=tk.LEFT, fill=tk.Y)
-        text.insert(tk.INSERT, "UNFIXED CODE READ BY OCR: \n")
+        text = tk.Text(self.master, height=14, width=30)
+        text.pack(side=tk.LEFT, padx=10, fill=tk.X)
+        text.insert(tk.INSERT, "OCR:\n--------------------------\n\n")
         text.insert(tk.END, unfixed_code)
 
-        text.insert(tk.INSERT, "\nCODE AFTER FIXING: \n")
+        text = tk.Text(self.master, height=14, width=30)
+        text.pack(side=tk.LEFT, padx=10, fill=tk.X)
+        text.insert(tk.INSERT, "AMAZING CODEFIXER:\n--------------------------\n\n")
         text.insert(tk.END, fixed_code)
 
     # Set up text field for code execution output
     def display_output(self, result, error):
-        text = tk.Text(self.master, height=14, width=70)
-        text.pack(side=tk.RIGHT, fill=tk.Y)
+        text = tk.Text(self.master, height=14, width=30)
+        text.pack(side=tk.RIGHT, padx=10, fill=tk.X)
 
         if error:
-            text.insert(tk.INSERT, "PROGRAM ERROR: \n")
+            text.insert(tk.INSERT, "EXECUTION ERROR:\n--------------------------\n\n")
             text.insert(tk.END, result)
         else:
-            text.insert(tk.INSERT, "PROGRAM OUTPUT: \n")
+            text.insert(tk.INSERT, "EXECUTION OUTPUT:\n--------------------------\n\n")
             text.insert(tk.END, result)
 
     # Get filename of the picture to be open
