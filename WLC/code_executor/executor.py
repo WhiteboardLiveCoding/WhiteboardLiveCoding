@@ -22,14 +22,18 @@ class CodeExecutor:
         else:
             self.force_local = True
 
-    def execute_code_img(self, picture_in):
+    def process_picture(self, picture_in):
         image = Preprocessor().process(picture_in)
         code, indents, poss_lines = image.get_code()
         code = code.lower()
         fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
 
-        LOGGER.info("Unfixed code OCRd from image: \n%s\n", code)
+        return code, fixed_code
 
+    def execute_code_img(self, picture_in):
+        code, fixed_code = self.process_picture(picture_in)
+
+        LOGGER.info("Unfixed code OCRd from image: \n%s\n", code)
         result, error = self.execute_code(fixed_code)
 
         return code, fixed_code, result, error
