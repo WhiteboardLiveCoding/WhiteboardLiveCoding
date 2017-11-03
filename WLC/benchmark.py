@@ -4,10 +4,8 @@ import os
 
 from os.path import isfile, join
 
-from WLC.code_fixing.codefixer import CodeFixer
-from WLC.code_fixing.trial_codefixer import TrialCodeFixer
+from WLC.code_executor.executor import CodeExecutor
 from WLC.image_processing.camera import Camera
-from WLC.image_processing.preprocessor import Preprocessor
 
 import editdistance
 
@@ -30,14 +28,9 @@ def _get_expected_code(file_name):
 def benchmark_file(file_name):
     expected_code = _get_expected_code(file_name)
     picture = Camera().read_file(file_name, None)
-    image = Preprocessor().process(picture)
-    code, indents, poss_lines = image.get_code()
-    code = code.lower()
+    code, fixed_code = CodeExecutor().process_picture(picture)
 
-    if 'sign' not in file_name:
-        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
-        # fixed_code = CodeFixer(code, indents, poss_lines).fix()
-    else:
+    if 'sign' in file_name:
         fixed_code = code
 
     difference = editdistance.eval("".join(code.split()), "".join(expected_code.split()))

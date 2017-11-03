@@ -6,6 +6,8 @@ import docker
 
 from WLC.code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
 from WLC.code_executor.redirected_std import redirected_std
+from WLC.code_fixing.trial_codefixer import TrialCodeFixer
+from WLC.image_processing.preprocessor import Preprocessor
 
 LOGGER = logging.getLogger()
 
@@ -20,13 +22,31 @@ class CodeExecutor:
         else:
             self.force_local = True
 
+    def process_picture(self, picture_in):
+        image = Preprocessor().process(picture_in)
+        code, indents, poss_lines = image.get_code()
+        code = code.lower()
+        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
+
+        return code, fixed_code
+
+    def execute_code_img(self, picture_in):
+        code, fixed_code = self.process_picture(picture_in)
+
+        LOGGER.info("Unfixed code OCRd from image: \n%s\n", code)
+        result, error = self.execute_code(fixed_code)
+
+        return code, fixed_code, result, error
+
     def execute_code(self, code):
         LOGGER.info("Executing code: \n%s\n", code)
 
         if self.force_local:
-            return self.execute_local(code)
+            result, error = self.execute_local(code)
         else:
-            return self.execute_sandbox(code)
+            result, error = self.execute_sandbox(code)
+
+        return result, error
 
     def execute_local(self, code):
         LOGGER.info("Executing locally (UNSAFE! use -ip parameter to run the code safely) . . .\n")
@@ -44,10 +64,10 @@ class CodeExecutor:
         if error_string:
             e = self.check_error(error_string)
             if e:
-                return e
+                return "", e
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog
+        return stdout_prog, None
 
     def execute_sandbox(self, code):
         LOGGER.info("Executing in sandbox . . .\n")
@@ -59,10 +79,10 @@ class CodeExecutor:
 
         e = self.check_error(stderr_prog)
         if e:
-            return e
+            return "", e
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog
+        return stdout_prog, None
 
     def check_error(self, err):
         start_point = err.find("<string>")

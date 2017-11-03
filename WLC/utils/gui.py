@@ -2,9 +2,6 @@ import tkinter as tk
 from os.path import dirname
 from tkinter import filedialog
 from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
-from WLC.code_fixing.codefixer import CodeFixer
-from WLC.code_fixing.trial_codefixer import TrialCodeFixer
-from WLC.image_processing.preprocessor import Preprocessor
 
 
 class Gui(tk.Frame):
@@ -18,33 +15,38 @@ class Gui(tk.Frame):
     def init_button(self):
         self.master.title("GUI")
         self.pack(fill=tk.BOTH, expand=1, side=tk.BOTTOM)
-        quit_button = tk.Button(self.master, text="Execute", command=lambda: self.execute_code(self.picture))
+        quit_button = tk.Button(self.master, text="EXECUTE", command=lambda: self.execute_code(self.picture))
         quit_button.pack(side=tk.TOP)
 
     # Execute code and display text field accordingly
     def execute_code(self, picture):
-        code_executor = CodeExecutor(self.docker_ip, DEFAULT_DOCKER_PORT)
-        image = Preprocessor().process(picture)
-        code, indents, poss_lines = image.get_code()
-        code = code.lower()
-        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
-        value = str(code_executor.execute_code(fixed_code))
-        self.display_ocr(fixed_code)
-        self.display_output(value)
+        unfixed_code, fixed_code, result, error = CodeExecutor(self.docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        self.display_ocr(unfixed_code, fixed_code)
+        self.display_output(result, error)
 
     # Set up text field for OCR output
-    def display_ocr(self, code):
-        text = tk.Text(self.master, height=14, width=70)
-        text.pack(side=tk.LEFT, fill=tk.Y)
-        text.insert(tk.INSERT, "CODE READ BY OCR : \n")
-        text.insert(tk.END, code)
+    def display_ocr(self, unfixed_code, fixed_code):
+        text = tk.Text(self.master, height=14, width=30)
+        text.pack(side=tk.LEFT, padx=10, fill=tk.X)
+        text.insert(tk.INSERT, "OCR:\n--------------------------\n\n")
+        text.insert(tk.END, unfixed_code)
+
+        text = tk.Text(self.master, height=14, width=30)
+        text.pack(side=tk.LEFT, padx=10, fill=tk.X)
+        text.insert(tk.INSERT, "AMAZING CODEFIXER:\n--------------------------\n\n")
+        text.insert(tk.END, fixed_code)
 
     # Set up text field for code execution output
-    def display_output(self, code):
-        text = tk.Text(self.master, height=14, width=70)
-        text.pack(side=tk.RIGHT, fill=tk.Y)
-        text.insert(tk.INSERT, "CODE EXECUTED : \n")
-        text.insert(tk.END, code)
+    def display_output(self, result, error):
+        text = tk.Text(self.master, height=14, width=30)
+        text.pack(side=tk.RIGHT, padx=10, fill=tk.X)
+
+        if error:
+            text.insert(tk.INSERT, "EXECUTION ERROR:\n--------------------------\n\n")
+            text.insert(tk.END, result)
+        else:
+            text.insert(tk.INSERT, "EXECUTION OUTPUT:\n--------------------------\n\n")
+            text.insert(tk.END, result)
 
     # Get filename of the picture to be open
     def get_picture(self):
