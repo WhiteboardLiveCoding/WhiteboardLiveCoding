@@ -74,7 +74,7 @@ def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_
         app.mainloop()
 
     else:
-        CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT).execute_code(picture)
+        CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
 
 
 if __name__ == '__main__':

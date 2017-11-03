@@ -22,21 +22,27 @@ class CodeExecutor:
         else:
             self.force_local = True
 
-    def execute_code(self, picture_in):
+    def execute_code_img(self, picture_in):
         image = Preprocessor().process(picture_in)
         code, indents, poss_lines = image.get_code()
         code = code.lower()
         fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
 
-        LOGGER.info("Unfixed code: \n%s\n", code)
-        LOGGER.info("Executing fixed code: \n%s\n", fixed_code)
+        LOGGER.info("Unfixed code OCRd from image: \n%s\n", code)
 
-        if self.force_local:
-            result, error = self.execute_local(fixed_code)
-        else:
-            result, error = self.execute_sandbox(fixed_code)
+        result, error = self.execute_code(fixed_code)
 
         return code, fixed_code, result, error
+
+    def execute_code(self, code):
+        LOGGER.info("Executing code: \n%s\n", code)
+
+        if self.force_local:
+            result, error = self.execute_local(code)
+        else:
+            result, error = self.execute_sandbox(code)
+
+        return result, error
 
     def execute_local(self, code):
         LOGGER.info("Executing locally (UNSAFE! use -ip parameter to run the code safely) . . .\n")

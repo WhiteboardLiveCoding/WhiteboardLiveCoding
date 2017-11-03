@@ -22,8 +22,18 @@ def api_upload_image():
         height, width, _ = img.shape
         pic = Picture(img, 0, 0, width, height, None)
 
-        code, fixed_code, result, error = CodeExecutor().execute_code(pic)
+        code, fixed_code, result, error = CodeExecutor().execute_code_img(pic)
 
         return json.dumps(['unfixed', code, 'fixed', fixed_code, 'result', str(result), 'error', str(error)])
     else:
         return render_template('upload_test.html')
+
+@app.route("/api/resubmit_code", methods=['POST', 'GET'])
+def api_resubmit_code():
+    if request.method == 'POST':
+        code = request.form['code']
+        result, error = CodeExecutor().execute_code(code)
+
+        return json.dumps(['result', str(result), 'error', str(error)])
+    else:
+        return render_template('resubmit_test.html')

@@ -20,7 +20,7 @@ class Gui(tk.Frame):
 
     # Execute code and display text field accordingly
     def execute_code(self, picture):
-        unfixed_code, fixed_code, result, error = CodeExecutor(self.docker_ip, DEFAULT_DOCKER_PORT).execute_code(picture)
+        unfixed_code, fixed_code, result, error = CodeExecutor(self.docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
         self.display_ocr(unfixed_code, fixed_code)
         self.display_output(result, error)
 
