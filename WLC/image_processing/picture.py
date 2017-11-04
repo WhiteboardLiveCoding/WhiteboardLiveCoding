@@ -4,8 +4,8 @@ import sys
 import cv2
 import numpy as np
 
-from WLC.image_processing.extended_image import ExtendedImage
-from WLC.image_processing.line import Line
+from ..image_processing.extended_image import ExtendedImage
+from ..image_processing.line import Line
 
 LOGGER = logging.getLogger()
 

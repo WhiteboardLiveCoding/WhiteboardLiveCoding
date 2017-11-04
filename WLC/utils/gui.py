@@ -1,7 +1,7 @@
 import tkinter as tk
 from os.path import dirname
 from tkinter import filedialog
-from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
+from ..code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
 
 
 class Gui(tk.Frame):
