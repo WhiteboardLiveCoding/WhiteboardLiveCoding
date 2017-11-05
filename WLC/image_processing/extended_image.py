@@ -1,11 +1,10 @@
+import hashlib
 import logging
 import math
 import os
 
 import cv2
-import imagehash as imagehash
 import numpy as np
-from PIL import Image
 from azure.storage.blob import BlockBlobService, ContentSettings
 
 LOGGER = logging.getLogger()
@@ -141,21 +140,20 @@ class ExtendedImage:
 
         account = os.environ['BLOB_ACCOUNT']
         key = os.environ['BLOB_KEY']
+        image = self.get_image()
 
         block_blob_service = BlockBlobService(account_name=account, account_key=key)
 
         if not block_blob_service.exists(container):
             block_blob_service.create_container(container)
 
-        img = cv2.cvtColor(self.get_image(), cv2.COLOR_BGR2RGB)
-        image_pil = Image.fromarray(img)
-        hashed = imagehash.average_hash(image_pil)
+        hashed = hashlib.md5(image.tobytes()).hexdigest()
 
         if block_blob_service.exists(container, hashed):
             LOGGER.debug('Did not save image, already found one with the same hash.')
             return False, hashed
 
-        img_bytes = cv2.imencode('.jpg', self.get_image())[1].tostring()
+        img_bytes = cv2.imencode('.jpg',image)[1].tostring()
 
         block_blob_service.create_blob_from_bytes(
             container,
