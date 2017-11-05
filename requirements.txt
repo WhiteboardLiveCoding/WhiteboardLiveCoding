@@ -1,3 +1,6 @@
+imagehash
+azure.storage.blob
+pillow
 fuzzysearch
 editdistance
 opencv-python

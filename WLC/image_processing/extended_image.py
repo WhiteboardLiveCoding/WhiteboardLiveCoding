@@ -1,8 +1,12 @@
 import logging
 import math
+import os
 
 import cv2
+import imagehash as imagehash
 import numpy as np
+from PIL import Image
+from azure.storage.blob import BlockBlobService, ContentSettings
 
 LOGGER = logging.getLogger()
 
@@ -122,6 +126,37 @@ class ExtendedImage:
         max_y = next(x[0] for x in enumerate(reversed(results)) if x[1] > 0)
 
         return min_y, len(results) - max_y
+
+    def save_to_azure(self, container):
+        if 'BLOB_ACCOUNT' not in os.environ or 'BLOB_KEY' not in os.environ:
+            raise ValueError('BLOB_ACCOUNT and BLOB_KEY environment variables need to be set.')
+
+        account = os.environ['BLOB_ACCOUNT']
+        key = os.environ['BLOB_KEY']
+
+        block_blob_service = BlockBlobService(account_name=account, account_key=key)
+
+        if not block_blob_service.exists(container):
+            block_blob_service.create_container(container)
+
+        img = cv2.cvtColor(self.get_image(), cv2.COLOR_BGR2RGB)
+        image_pil = Image.fromarray(img)
+        hashed = imagehash.average_hash(image_pil)
+
+        if block_blob_service.exists(container, hashed):
+            LOGGER.debug('Did not save image, already found one with the same hash.')
+            return False, ""
+
+        img_bytes = cv2.imencode('.jpg', self.get_image())[1].tostring()
+
+        block_blob_service.create_blob_from_bytes(
+            container,
+            hashed,
+            img_bytes,
+            content_settings=ContentSettings(content_type='image/jpg')
+        )
+
+        return True, hashed
 
 
 class Preferences:
