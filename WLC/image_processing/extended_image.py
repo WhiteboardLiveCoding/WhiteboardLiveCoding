@@ -128,6 +128,14 @@ class ExtendedImage:
         return min_y, len(results) - max_y
 
     def save_to_azure(self, container):
+        """
+        Saves image to Azure Blob storage as a jpg. Requires BLOB_ACCOUNT and BLOB_KEY environment variables to be set.
+        Uses the hash value of the image to determine if it already exists.
+
+        :param container: Destination container (blob storage uses flat structure)
+        :return: Whether the image was saved and name of the file (hash value)
+        """
+
         if 'BLOB_ACCOUNT' not in os.environ or 'BLOB_KEY' not in os.environ:
             raise ValueError('BLOB_ACCOUNT and BLOB_KEY environment variables need to be set.')
 
@@ -145,7 +153,7 @@ class ExtendedImage:
 
         if block_blob_service.exists(container, hashed):
             LOGGER.debug('Did not save image, already found one with the same hash.')
-            return False, ""
+            return False, hashed
 
         img_bytes = cv2.imencode('.jpg', self.get_image())[1].tostring()
 
