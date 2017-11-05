@@ -134,6 +134,8 @@ class ExtendedImage:
         :param container: Destination container (blob storage uses flat structure)
         :return: Whether the image was saved and name of the file (hash value)
         """
+        # Azure spams the logs, this will make it quiet.
+        logging.getLogger("azure").setLevel(logging.CRITICAL)
 
         if 'BLOB_ACCOUNT' not in os.environ or 'BLOB_KEY' not in os.environ:
             raise ValueError('BLOB_ACCOUNT and BLOB_KEY environment variables need to be set.')
