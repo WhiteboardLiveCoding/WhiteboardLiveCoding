@@ -29,12 +29,10 @@ def api_upload_image():
         pic = Picture(img, 0, 0, width, height, None)
         saved, key = save_image_to_azure('pictures', pic.get_image())
 
-        if not saved:
-            key = None
-
         code, fixed_code, result, error = CodeExecutor().execute_code_img(pic)
+        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key}
 
-        return json.dumps(['unfixed', code, 'fixed', fixed_code, 'result', str(result), 'error', str(error), 'key', key])
+        return json.dumps(response)
     else:
         return render_template('upload_test.html')
 
@@ -48,7 +46,7 @@ def api_resubmit_code():
         if request.json.get('key'):
             save_code_to_azure('code', 'pictures', request.json.get('key'), code)
 
-        return json.dumps(['result', str(result), 'error', str(error)])
+        return json.dumps({'result': str(result), 'error': str(error)})
     else:
         return render_template('resubmit_test.html')
 

@@ -10,7 +10,7 @@ test:
 
 deployment:
   hub:
-    branch: storage
+    branch: master
     commands:
       - docker info
       - docker build --build-arg ARG_BLOB_ACCOUNT=$ARG_BLOB_ACCOUNT --build-arg ARG_BLOB_KEY=$ARG_BLOB_KEY --rm=false -t mz4315/whiteboardlivecoding-ocr .
