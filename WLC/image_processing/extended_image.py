@@ -1,14 +1,10 @@
-import hashlib
 import logging
 import math
-import os
 
 import cv2
 import numpy as np
-from azure.storage.blob import BlockBlobService, ContentSettings
 
 LOGGER = logging.getLogger()
-
 
 class ExtendedImage:
     MAX_ROTATE = 20
@@ -125,46 +121,6 @@ class ExtendedImage:
         max_y = next(x[0] for x in enumerate(reversed(results)) if x[1] > 0)
 
         return min_y, len(results) - max_y
-
-    def save_to_azure(self, container):
-        """
-        Saves image to Azure Blob storage as a jpg. Requires BLOB_ACCOUNT and BLOB_KEY environment variables to be set.
-        Uses the hash value of the image to determine if it already exists.
-
-        :param container: Destination container (blob storage uses flat structure)
-        :return: Whether the image was saved and name of the file (hash value)
-        """
-        # Azure spams the logs, this will make it quiet.
-        logging.getLogger("azure").setLevel(logging.CRITICAL)
-
-        if 'BLOB_ACCOUNT' not in os.environ or 'BLOB_KEY' not in os.environ:
-            raise ValueError('BLOB_ACCOUNT and BLOB_KEY environment variables need to be set.')
-
-        account = os.environ['BLOB_ACCOUNT']
-        key = os.environ['BLOB_KEY']
-        image = self.get_image()
-
-        block_blob_service = BlockBlobService(account_name=account, account_key=key)
-
-        if not block_blob_service.exists(container):
-            block_blob_service.create_container(container)
-
-        hashed = hashlib.md5(image.tobytes()).hexdigest()
-
-        if block_blob_service.exists(container, hashed):
-            LOGGER.debug('Did not save image, already found one with the same hash.')
-            return False, hashed
-
-        img_bytes = cv2.imencode('.jpg',image)[1].tostring()
-
-        block_blob_service.create_blob_from_bytes(
-            container,
-            hashed,
-            img_bytes,
-            content_settings=ContentSettings(content_type='image/jpg')
-        )
-
-        return True, hashed
 
 
 class Preferences:
