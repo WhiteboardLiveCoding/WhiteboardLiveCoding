@@ -27,7 +27,7 @@ def api_upload_image():
 
         height, width, _ = img.shape
         pic = Picture(img, 0, 0, width, height, None)
-        saved, key = save_image_to_azure('pictures', pic)
+        saved, key = save_image_to_azure('pictures', pic.get_image())
 
         if not saved:
             key = None
@@ -45,9 +45,8 @@ def api_resubmit_code():
         code = request.form['code']
         result, error = CodeExecutor().execute_code(code)
 
-        data = json.dumps(request.json)
-        if 'key' in data and data['key']:
-            save_code_to_azure('code', 'pictures', data['key'], code)
+        if request.json.get('key'):
+            save_code_to_azure('code', 'pictures', request.json.get('key'), code)
 
         return json.dumps(['result', str(result), 'error', str(error)])
     else:

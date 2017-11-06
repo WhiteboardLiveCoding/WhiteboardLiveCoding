@@ -12,11 +12,11 @@ logging.getLogger("azure").setLevel(logging.CRITICAL)
 
 
 def get_block_blob_service():
-    if 'BLOB_ACCOUNT' not in os.environ or 'BLOB_KEY' not in os.environ:
+    if not os.environ.get('BLOB_ACCOUNT') or not os.environ.get('BLOB_KEY'):
         raise ValueError('BLOB_ACCOUNT and BLOB_KEY environment variables need to be set.')
 
-    account = os.environ['BLOB_ACCOUNT']
-    key = os.environ['BLOB_KEY']
+    account = os.environ.get('BLOB_ACCOUNT')
+    key = os.environ.get('BLOB_KEY')
 
     return BlockBlobService(account_name=account, account_key=key)
 
