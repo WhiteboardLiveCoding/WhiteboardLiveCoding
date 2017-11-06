@@ -6,11 +6,10 @@ from os.path import isfile, join
 
 from WLC.code_executor.executor import CodeExecutor
 from WLC.image_processing.camera import Camera
-
-import editdistance
-
 from WLC.utils.formatting import FORMAT
 from WLC.utils.path import get_full_path
+
+import editdistance
 
 logging.basicConfig(format=FORMAT)
 LOGGER = logging.getLogger()

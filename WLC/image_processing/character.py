@@ -1,5 +1,4 @@
 import filecmp
-import logging
 import os
 from math import floor, ceil
 
@@ -9,8 +8,8 @@ from os.path import isfile, join, dirname
 
 import re
 
-from WLC.image_processing.extended_image import ExtendedImage
-from WLC.ocr.ocr import OCR
+from ..image_processing.extended_image import ExtendedImage
+from ..ocr.ocr import OCR
 
 # the MNIST standard image size.
 STD_IMAGE_SIZE = 28

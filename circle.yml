@@ -1,7 +1,18 @@
 machine:
   python:
     version: 3.6.2
+  services:
+    - docker
 
 test:
   override:
     - pytest WLC/tests.py
+
+deployment:
+  hub:
+    branch: master
+    commands:
+      - docker info
+      - docker build --rm=false -t mz4315/whiteboardlivecoding-ocr .
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push mz4315/whiteboardlivecoding-ocr

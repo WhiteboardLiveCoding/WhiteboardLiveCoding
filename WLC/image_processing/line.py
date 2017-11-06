@@ -3,8 +3,8 @@ import logging
 import cv2
 import numpy as np
 
-from WLC.image_processing.extended_image import ExtendedImage
-from WLC.image_processing.word import Word
+from ..image_processing.extended_image import ExtendedImage
+from ..image_processing.word import Word
 
 
 LOGGER = logging.getLogger()

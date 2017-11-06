@@ -1,6 +1,5 @@
 import logging
 import math
-import sys
 
 import cv2
 import numpy as np

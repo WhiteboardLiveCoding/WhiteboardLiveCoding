@@ -2,8 +2,8 @@ import logging
 
 import cv2
 
-from WLC.image_processing.character import Character
-from WLC.image_processing.extended_image import ExtendedImage
+from ..image_processing.character import Character
+from ..image_processing.extended_image import ExtendedImage
 
 LOGGER = logging.getLogger()
 

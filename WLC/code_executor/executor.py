@@ -4,10 +4,10 @@ import traceback
 
 import docker
 
-from WLC.code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
-from WLC.code_executor.redirected_std import redirected_std
-from WLC.code_fixing.trial_codefixer import TrialCodeFixer
-from WLC.image_processing.preprocessor import Preprocessor
+from ..code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
+from ..code_executor.redirected_std import redirected_std
+from ..code_fixing.trial_codefixer import TrialCodeFixer
+from ..image_processing.preprocessor import Preprocessor
 
 LOGGER = logging.getLogger()
 
