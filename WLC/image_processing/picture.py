@@ -17,16 +17,25 @@ class Picture(ExtendedImage):
 
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
+
+        self.lines = []
         self.indentation_threshold = self.INDENTATION_THRESHOLD
 
         if self.preferences and self.preferences.show_pic:
             cv2.imshow("Full picture", image)
             cv2.waitKey(0)
 
+    def get_line_coordinates(self, n):
+        if 0 > n or n > len(self.lines):
+            return []
+
+        line = self.lines[n - 1]
+        return line.get_bounding_coordinates()
+
     def get_code(self):
-        lines = self._segment_image(self.get_image())
-        LOGGER.debug("Getting code for the %d lines detected.", len(lines))
-        return self._merge_code(lines)
+        self.lines = self._segment_image(self.get_image())
+        LOGGER.debug("Getting code for the %d lines detected.", len(self.lines))
+        return self._merge_code(self.lines)
 
     def _segment_image(self, gray_image):
         lines = []

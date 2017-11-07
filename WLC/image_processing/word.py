@@ -13,6 +13,8 @@ MAXIMUM_OVERLAP = 0.5
 class Word(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, average_distance, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
+
+        self.characters = []
         self.average_distance = average_distance
 
         if self.preferences and self.preferences.show_word:
@@ -20,8 +22,8 @@ class Word(ExtendedImage):
             cv2.waitKey(0)
 
     def get_code(self):
-        characters = self._segment_image()
-        return self._merge_code(characters)
+        self.characters = self._segment_image()
+        return self._merge_code(self.characters)
 
     def _segment_image(self):
         # find contours

@@ -16,15 +16,17 @@ WIDTH_DILATION_MODIFIER = 0.75
 class Line(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, preferences=None):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
+
+        self.words = []
         self._fix_rotation()
 
         if self.preferences and self.preferences.show_line:
             cv2.imshow("Line", self.get_image())
             cv2.waitKey(0)
 
-    def get_code(self, ):
-        words = self._segment_image()
-        return self._merge_code(words)
+    def get_code(self):
+        self.words = self._segment_image()
+        return self._merge_code(self.words)
 
     def _segment_image(self):
         points, used_contours = self.get_center_points(self.get_image())
