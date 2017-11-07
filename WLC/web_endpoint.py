@@ -8,6 +8,7 @@ from flask import request
 
 from .code_executor.executor import CodeExecutor
 from .image_processing.picture import Picture
+from .utils.azure import save_image_to_azure, save_code_to_azure
 
 app = Flask(__name__)
 
@@ -26,10 +27,12 @@ def api_upload_image():
 
         height, width, _ = img.shape
         pic = Picture(img, 0, 0, width, height, None)
+        saved, key = save_image_to_azure('pictures', pic.get_image())
 
         code, fixed_code, result, error = CodeExecutor().execute_code_img(pic)
+        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key}
 
-        return json.dumps(['unfixed', code, 'fixed', fixed_code, 'result', str(result), 'error', str(error)])
+        return json.dumps(response)
     else:
         return render_template('upload_test.html')
 
@@ -40,7 +43,10 @@ def api_resubmit_code():
         code = request.form['code']
         result, error = CodeExecutor().execute_code(code)
 
-        return json.dumps(['result', str(result), 'error', str(error)])
+        if request.json.get('key'):
+            save_code_to_azure('code', 'pictures', request.json.get('key'), code)
+
+        return json.dumps({'result': str(result), 'error': str(error)})
     else:
         return render_template('resubmit_test.html')
 

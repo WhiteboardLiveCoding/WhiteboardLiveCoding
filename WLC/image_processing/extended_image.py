@@ -6,7 +6,6 @@ import numpy as np
 
 LOGGER = logging.getLogger()
 
-
 class ExtendedImage:
     MAX_ROTATE = 20
 

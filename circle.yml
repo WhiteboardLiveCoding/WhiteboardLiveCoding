@@ -13,6 +13,6 @@ deployment:
     branch: master
     commands:
       - docker info
-      - docker build --rm=false -t mz4315/whiteboardlivecoding-ocr .
+      - docker build --build-arg ARG_BLOB_ACCOUNT=$ARG_BLOB_ACCOUNT --build-arg ARG_BLOB_KEY=$ARG_BLOB_KEY --rm=false -t mz4315/whiteboardlivecoding-ocr .
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
       - docker push mz4315/whiteboardlivecoding-ocr
