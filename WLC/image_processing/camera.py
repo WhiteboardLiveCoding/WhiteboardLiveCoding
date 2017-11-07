@@ -1,9 +1,9 @@
 import logging
 
 import cv2
+from image_segmentation.extended_image import Preferences
+from image_segmentation.picture import Picture
 
-from ..image_processing.extended_image import Preferences
-from ..image_processing.picture import Picture
 from ..utils.path import get_full_path
 
 LOGGER = logging.getLogger()

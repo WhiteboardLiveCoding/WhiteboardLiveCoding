@@ -14,7 +14,6 @@ MINIMUM_PROBABILITY = 0.01
 
 
 class OCR(metaclass=Singleton):
-
     def __init__(self):
         self._load_model()
         self._load_mapping()
