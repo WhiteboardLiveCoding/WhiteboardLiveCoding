@@ -5,9 +5,9 @@ from cv2 import cv2, IMREAD_COLOR
 
 from flask import Flask, render_template
 from flask import request
+from image_segmentation.picture import Picture
 
 from .code_executor.executor import CodeExecutor
-from .image_processing.picture import Picture
 from .utils.azure import save_image_to_azure, save_code_to_azure
 
 app = Flask(__name__)
