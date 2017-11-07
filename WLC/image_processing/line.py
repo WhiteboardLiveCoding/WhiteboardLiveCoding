@@ -24,9 +24,9 @@ class Line(ExtendedImage):
             cv2.imshow("Line", self.get_image())
             cv2.waitKey(0)
 
-    def get_code(self):
+    def get_segments(self):
         self.words = self._segment_image()
-        return self._merge_code(self.words)
+        return self.words
 
     def _segment_image(self):
         points, used_contours = self.get_center_points(self.get_image())
@@ -65,30 +65,3 @@ class Line(ExtendedImage):
 
         LOGGER.debug("%d words detected in this line.", len(words))
         return words
-
-    def _merge_code(self, words):
-        """
-        Merges all of the words into a line of code
-        """
-
-        coded_words = []
-        word_variances = {}
-        for idx, word in enumerate(words):
-            code_word, poss_chars = word.get_code()
-
-            word_variances[idx] = poss_chars
-            coded_words.append(code_word)
-
-        return " ".join(coded_words), self.join_words(word_variances)
-
-    def join_words(self, poss_lines):
-        joined = list()
-
-        for word in range(len(poss_lines)):
-            for j in range(len(poss_lines[word])):
-                joined.append(poss_lines[word][j])
-
-            if word < len(poss_lines) - 1:
-                joined.append([' '])
-
-        return joined

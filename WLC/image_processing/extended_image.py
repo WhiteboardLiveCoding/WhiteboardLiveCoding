@@ -6,6 +6,7 @@ import numpy as np
 
 LOGGER = logging.getLogger()
 
+
 class ExtendedImage:
     MAX_ROTATE = 20
 
@@ -90,7 +91,7 @@ class ExtendedImage:
         dist_2 = np.einsum('ij,ij->i', deltas, deltas)
         return np.partition(dist_2, 1)[1]
 
-    def get_code(self):
+    def get_segments(self):
         """Get the code from the current image. This may require recursively checking child elements."""
         raise NotImplementedError("get_code not implemented")
 

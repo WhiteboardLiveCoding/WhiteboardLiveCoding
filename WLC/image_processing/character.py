@@ -9,7 +9,6 @@ from os.path import isfile, join, dirname
 import re
 
 from ..image_processing.extended_image import ExtendedImage
-from ..ocr.ocr import OCR
 
 # the MNIST standard image size.
 STD_IMAGE_SIZE = 28
@@ -22,17 +21,14 @@ MAXIMUM_EROSIONS = 3
 class Character(ExtendedImage):
     def __init__(self, image, x_axis, y_axis, width, height, preferences):
         super().__init__(image, x_axis, y_axis, width, height, preferences)
-        self.ocr = OCR()
         self._fix_rotation()
 
         if self.preferences and self.preferences.show_char:
             cv2.imshow("Character", image)
             cv2.waitKey(0)
 
-    def get_code(self):
-        img = self.transform_to_standard()
-
-        return self.ocr.predict(img)
+    def get_segments(self):
+        return self.transform_to_standard()
 
     def _annotate(self, res):
         """
