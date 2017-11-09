@@ -40,7 +40,7 @@ def api_upload_image():
 @app.route("/api/resubmit_code", methods=['POST', 'GET'])
 def api_resubmit_code():
     if request.method == 'POST':
-        code = request.form['code']
+        code = request.json.get('code')
         result, error = CodeExecutor().execute_code(code)
 
         if request.json.get('key'):
