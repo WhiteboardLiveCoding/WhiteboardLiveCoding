@@ -63,6 +63,12 @@ class TrialCodeFixer:
         self.rules.append(('continue', 8, None, lambda x, y: 'continue'))
         self.rules.append(('(.*)', 0, None, None))  # If nothing else works this will
 
+        LOGGER.debug('Compiling main rules.')
+        self.rules_regexes = self.compile_regex(self.rules)
+
+        LOGGER.debug('Compiling statement rules.')
+        self.statements_regexes = self.compile_regex(self.statements)
+
     def fix(self):
         """
         Main function to be called which finds the closest regex match for each line, extracts context variables and
@@ -75,12 +81,9 @@ class TrialCodeFixer:
         fixed_lines = []
         closest_matches = []
 
-        LOGGER.debug('Compiling main rules.')
-        regexes = self.compile_regexes(self.rules)
-
         LOGGER.debug('Looking for closest matches.')
         for i in range(len(self.poss_lines)):  # range loop OK because of indexing type
-            closest_match = self.find_closest_match(self.poss_lines[i], regexes)
+            closest_match = self.find_closest_match(self.poss_lines[i], self.rules_regexes)
             (match, analyze_func, _) = closest_match
 
             if analyze_func:
@@ -114,9 +117,10 @@ class TrialCodeFixer:
         :return: The closest match and the functions used to analyze and fix the line
         """
         distance = sys.maxsize
-        closest = None
+        closest = None, None, None
         permutations = self.permutations(poss_line)
 
+        LOGGER.debug("Checking {} regex fixes for a good match.".format(len(regexes)))
         for r, fixed, analyze, fix in regexes:
             for possible in permutations:
                 match = r.match(possible)
@@ -154,12 +158,12 @@ class TrialCodeFixer:
 
         return results
 
-    def compile_regexes(self, rules):
+    def compile_regex(self, to_compile):
         """
         Compiles the list of regexes replacing keywords in the rules by the syntax expressions. Syntax expressions can
         also refer to other expressions that were listed before them because they get expanded.
 
-        :param rules: List of rules that should get compiled into syntax expressions
+        :param to_compile: List of rules that should get compiled into syntax expressions
         :return: Compiled list of regexes
         """
         regexes = []
@@ -168,7 +172,7 @@ class TrialCodeFixer:
             for j in range(i):
                 self.syntax[i] = (self.syntax[i][0], self.syntax[i][1].replace(self.syntax[j][0], self.syntax[j][1]))
 
-        for rule, fixed, analyze, fix in rules:
+        for rule, fixed, analyze, fix in to_compile:
             difference = max(ceil(fixed * ALLOWED_DIFFERENCE), 0)
             reg = '^(?e)((?:%s){e<=%s})$' % (rule, difference)
 
@@ -180,7 +184,7 @@ class TrialCodeFixer:
 
         regexes = sorted(regexes, key=lambda x: -x[1])
 
-        return regexes
+        return regexes  # return compiled regexes
 
     def levenshtein_closest(self, poss_chars, possibilities, allowed_difference=ALLOWED_DIFFERENCE):
         """
@@ -199,7 +203,7 @@ class TrialCodeFixer:
 
         for permutation in permutations:
             for possibility in possibilities:
-                distance = editdistance.eval(permutation, possibility) / len(possibility)
+                distance = editdistance.eval(permutation, possibility) / (len(possibility) or 1)
 
                 if distance == 0:
                     return possibility, 0
@@ -207,6 +211,36 @@ class TrialCodeFixer:
                     recommended = possibility
                     best = distance
         return recommended, best
+
+    def find_args(self, args):
+        # If no args or args empty string, return empty list
+        if not args or not args.strip():
+            return []
+
+        # Init prev to first non-whitespace character
+        prev = 0
+        while prev < len(args) and args[prev] == " ":
+            prev += 1
+
+        # No open brackets, so 0
+        openBR = 0
+        # curr list of results is empty
+        arguments = []
+
+        for idx, char in enumerate(args):
+            if char == "," and openBR == 0:
+                arguments.append((args[prev: idx], prev, idx))
+                prev = idx + 1
+                while args[prev] == " ":
+                    prev += 1
+            elif char == "(":
+                openBR += 1
+            elif char == ")":
+                openBR -= 1
+        else:
+            arguments.append((args[prev:], prev, len(args)))
+
+        return arguments
 
     # ANALYSE
     def analyze_class(self, groups, line_n):
@@ -364,25 +398,33 @@ class TrialCodeFixer:
         return 'def {}({}):'.format(*groups[1:])
 
     def fix_arguments(self, args, poss_chars):
-        # TODO: THIS DOESNT DO BRACKET MATCHING PROPERLY -> two functions in one decl will break due to greedy matching
-        # need to write a simple parser to split arguments while keeping position and matching brackets.
-        arg_matches = regex.finditer("[ ]?([^,()]+(?:\(.*\))?)", args)
+        arg_matches = self.find_args(args)
 
-        # TODO: some statement matching here - func vs variable vs random
+        LOGGER.debug("Fixing {} arguments: {}".format(len(arg_matches), arg_matches))
         result = []
         for match in arg_matches:
-            group = match.groups()[0]
-            # NOTE: commented top avoid confusion.
-            # new_arg = self.fix_variable(match, poss_chars[match.start(1): match.end(1)])  # when variable.
-            new_arg = group
-            LOGGER.debug("Fixing argument {} to {}".format(group, new_arg))
+            arg = match[0]
+            start = match[1]
+            end = match[2]
+            new_arg = self.fix_statement(arg, poss_chars[start: end])  # when variable.
+            LOGGER.debug("Fixing argument {} to {}".format(arg, new_arg))
             result.append(new_arg)
 
         return ", ".join(result)
 
-    def fix_variable(self, match, poss_chars):
-        groups = match.groups()
+    def fix_statement(self, matched_text, poss_chars):
+        match, analyze_func, fix_func = self.find_closest_match(poss_chars, self.statements_regexes)
 
+        if fix_func:
+            fixed = fix_func(match, poss_chars)
+        else:
+            LOGGER.debug("No match for {}. Not fixing.".format(matched_text))
+            fixed = matched_text
+
+        return fixed
+
+    # TODO: ensure we don't fix non-vars
+    def fix_variable(self, matched_text, poss_chars):
         closest, _ = self.levenshtein_closest(poss_chars, self.context["variables"])
-        LOGGER.debug("Fixing variable {} to {}.".format(groups[0], closest))
+        LOGGER.debug("Fixing variable {} to {}.".format(matched_text, closest))
         return closest
