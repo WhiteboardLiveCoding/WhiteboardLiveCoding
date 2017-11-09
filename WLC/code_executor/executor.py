@@ -16,6 +16,8 @@ DEFAULT_DOCKER_PORT = "2375"
 
 
 class CodeExecutor:
+    NO_OUTPUT = "Program did not generate any output!"
+
     def __init__(self, ip="", port=""):
         if ip and port:
             self.client = docker.DockerClient(base_url="tcp://{}:{}".format(ip, port))
@@ -63,12 +65,14 @@ class CodeExecutor:
                 error_string = traceback.format_exc()
 
         if error_string:
-            e = self.check_error(error_string)
-            if e:
-                return "", e
+            e = self.parse_error(error_string)
+            return self.NO_OUTPUT, e
+
+        if not stdout_prog:
+            stdout_prog = self.NO_OUTPUT
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog, None
+        return stdout_prog, ExecutorError()
 
     def execute_sandbox(self, code):
         LOGGER.info("Executing in sandbox . . .\n")
@@ -78,28 +82,50 @@ class CodeExecutor:
         stdout_prog = container.logs(stdout=True).decode("utf-8")
         stderr_prog = container.logs(stderr=True).decode("utf-8")
 
-        e = self.check_error(stderr_prog)
-        if e:
-            return "", e
+        error_match, _ = self.find_error(stderr_prog)
+        if error_match:
+            error_parsed = self.parse_error(stderr_prog)
+            return self.NO_OUTPUT, error_parsed
+
+        if not stdout_prog:
+            stdout_prog = self.NO_OUTPUT
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog, None
+        return stdout_prog, ExecutorError()
 
-    def check_error(self, err):
+    def find_error(self, err):
         start_point = err.find("<string>")
         if start_point == -1:
             start_point = 0
 
-        if err.find(PY_STR_ERR_SYNTAX) != -1:
+        match = re.search("[A-Za-z]+Error:", err[start_point:])
+
+        return match, start_point
+
+    def parse_error(self, err):
+        match, start_point = self.find_error(err)
+
+        error_type = "<unknown>"
+        error_line = -1
+        error_column = -1
+
+        if match:
+            error_type = match.group(0)
             match = re.search("line ([0-9]+)", err[start_point:])
             if match:
-                line = match.group(1)
+                error_line = match.group(1)
             else:
-                line = -1
                 LOGGER.info("Could not parse error, error string: \n%s\n", err)
-            e = ExecutorError(ExecutorError.ERROR_TYPE_SYNTAX, line)
-            LOGGER.info("Execution failed with error: %s\n", str(e))
 
-            return e
+            # only some errors contain column
+            match = re.search("(\s*)\^", err[start_point:])
+            if match:
+                error_column = len(match.group(1))
 
-        return None
+        else:
+            LOGGER.info("Could not parse error, error string: \n%s\n", err)
+
+        error = ExecutorError(error_type, error_line, error_column)
+        LOGGER.info("Execution failed with: %s\n", str(error))
+
+        return error
