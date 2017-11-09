@@ -107,6 +107,7 @@ class CodeExecutor:
 
         error_type = "<unknown>"
         error_line = -1
+        error_column = -1
 
         if match:
             error_type = match.group(0)
@@ -115,10 +116,16 @@ class CodeExecutor:
                 error_line = match.group(1)
             else:
                 LOGGER.info("Could not parse error, error string: \n%s\n", err)
+
+            # only some errors contain column
+            match = re.search("(\s*)\^", err[start_point:])
+            if match:
+                error_column = len(match.group(1))
+
         else:
             LOGGER.info("Could not parse error, error string: \n%s\n", err)
 
-        error = ExecutorError(error_type, error_line)
+        error = ExecutorError(error_type, error_line, error_column)
         LOGGER.info("Execution failed with: %s\n", str(error))
 
         return error
