@@ -85,7 +85,7 @@ class CodeExecutor:
         error_match, _ = self.find_error(stderr_prog)
         if error_match:
             error_parsed = self.parse_error(stderr_prog)
-            return "", error_parsed
+            return self.NO_OUTPUT, error_parsed
 
         if not stdout_prog:
             stdout_prog = self.NO_OUTPUT
