@@ -42,7 +42,7 @@ def save_image_to_azure(container, image):
 
     if block_blob_service.exists(container, hashed):
         LOGGER.debug('Did not save image, already found one with the same hash.')
-        return False, ""
+        return False, hashed
 
     img_bytes = cv2.imencode('.jpg', image)[1].tostring()
 
