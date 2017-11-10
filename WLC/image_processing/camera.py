@@ -1,11 +1,10 @@
 import logging
-from os.path import dirname, join
 
 import cv2
+from image_segmentation.extended_image import Preferences
+from image_segmentation.picture import Picture
 
-from WLC.image_processing.extended_image import Preferences
-from WLC.image_processing.picture import Picture
-from WLC.utils.path import get_full_path
+from ..utils.path import get_full_path
 
 LOGGER = logging.getLogger()
 

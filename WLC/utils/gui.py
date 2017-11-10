@@ -1,7 +1,7 @@
 import tkinter as tk
 from os.path import dirname
 from tkinter import filedialog
-from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
+from ..code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
 
 
 class Gui(tk.Frame):
@@ -41,12 +41,11 @@ class Gui(tk.Frame):
         text = tk.Text(self.master, height=14, width=30)
         text.pack(side=tk.RIGHT, padx=10, fill=tk.X)
 
-        if error:
-            text.insert(tk.INSERT, "EXECUTION ERROR:\n--------------------------\n\n")
-            text.insert(tk.END, result)
-        else:
-            text.insert(tk.INSERT, "EXECUTION OUTPUT:\n--------------------------\n\n")
-            text.insert(tk.END, result)
+        text.insert(tk.INSERT, "EXECUTION OUTPUT:\n--------------------------\n\n")
+        text.insert(tk.END, result)
+
+        text.insert(tk.INSERT, "\n\nEXECUTION ERROR:\n--------------------------\n\n")
+        text.insert(tk.END, str(error))
 
     # Get filename of the picture to be open
     def get_picture(self):
