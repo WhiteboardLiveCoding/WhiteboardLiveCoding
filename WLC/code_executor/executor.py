@@ -125,7 +125,7 @@ class CodeExecutor:
         else:
             LOGGER.info("Could not parse error, error string: \n%s\n", err)
 
-        error = ExecutorError(error_type, error_line, error_column)
+        error = ExecutorError(error_type, int(error_line), int(error_column))
         LOGGER.info("Execution failed with: %s\n", str(error))
 
         return error
