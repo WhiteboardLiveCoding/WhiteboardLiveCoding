@@ -99,7 +99,8 @@ class TrialCodeFixer:
         for idx, closest_match in enumerate(closest_matches):
             (match, _, fix_func) = closest_match
             if fix_func:
-                fixed_lines.append(fix_func(match, self.poss_lines[idx]))
+                fixed = fix_func(match, self.poss_lines[idx])
+                fixed_lines.append(self.naive_fix(fixed))
             else:
                 groups = match.groups()
                 LOGGER.debug("No match found for {}. Defaulting to not fixing.".format(*groups[1:]))
@@ -211,6 +212,14 @@ class TrialCodeFixer:
                     recommended = possibility
                     best = distance
         return recommended, best
+
+    def naive_fix(self, line):
+        replace = [('--', '__'), ('\'\'', '"'), (',,', '"')]
+
+        for (find, rep) in replace:
+            line = line.replace(find, rep)
+
+        return line
 
     def find_args(self, args):
         # If no args or args empty string, return empty list
