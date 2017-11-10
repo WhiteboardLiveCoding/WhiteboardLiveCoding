@@ -30,7 +30,14 @@ def api_upload_image():
         saved, key = save_image_to_azure('pictures', pic.get_image())
 
         code, fixed_code, result, error = CodeExecutor().execute_code_img(pic)
-        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key}
+
+        ar = {
+            'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
+            'line': pic.get_line_coordinates(error.get_line()),
+            'character': pic.get_character_coordinates(error.get_line(), error.get_column())
+        }
+
+        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key, 'ar': ar}
 
         return json.dumps(response)
     else:
