@@ -4,7 +4,7 @@ import traceback
 
 import docker
 
-from ..ocr.PictureOCR import PictureOCR
+from ..ocr.picture_ocr import PictureOCR
 from ..code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
 from ..code_executor.redirected_std import redirected_std
 from ..code_fixing.trial_codefixer import TrialCodeFixer
