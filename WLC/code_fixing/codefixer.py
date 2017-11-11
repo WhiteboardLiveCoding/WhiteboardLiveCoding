@@ -33,7 +33,7 @@ class CodeFixer:
         self.syntax.append(('BOOLEAN', '.*'))
         self.syntax.append(('PARAMETERS', '.*'))
 
-        self.statements.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
+        self.statements.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_func_or_class_call))
         self.statements.append(('(VARIABLE)\.(FUNCTION)\((STATEMENT)\)', 3, None, self.fix_method_call))
         self.statements.append(('(VARIABLE)', 0, None, self.fix_variable))
 
@@ -285,7 +285,6 @@ class CodeFixer:
         groups = match.groups()
         poss_import = poss_chars[match.start(2): match.end(2)]
 
-        # poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
         LOGGER.debug("Fixing import. Adding {} to context after analysis.".format(closest))
         self.context["imports"].append(closest)
@@ -302,7 +301,6 @@ class CodeFixer:
     def fix_from_import(self, match, poss_chars):
         groups = match.groups()
         poss_import = poss_chars[match.start(2): match.end(2)]
-        # poss_import = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest_module, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
         LOGGER.debug("Fixing from X import Y. Adding {} to context after analysis.".format(closest_module))
         for imported in groups[1:]:
@@ -312,7 +310,6 @@ class CodeFixer:
     def fix_class(self, match, poss_chars):
         groups = match.groups()
         poss_class = poss_chars[match.start(2): match.end(2)]
-        # poss_class = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_class, self.context["classes"])
         LOGGER.debug("Fixing class. Changing from {} to {}.".format(groups[1], closest))
         return 'class {}:'.format(closest)
@@ -350,7 +347,6 @@ class CodeFixer:
     def fix_function_call(self, match, poss_chars):
         groups = match.groups()
         poss_func = poss_chars[match.start(2): match.end(2)]
-        # poss_func = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest, _ = self.levenshtein_closest(poss_func, self.context["functions"])
         LOGGER.debug(groups)
         LOGGER.debug("Fixing func call. Using {} and {}.".format(*(closest, *groups[2:])))
@@ -361,15 +357,27 @@ class CodeFixer:
         LOGGER.debug("Fixing func call arguments from {} to {}".format(groups[2], new_args))
         return '{}({})'.format(closest, new_args)
 
+    # Note: not perfect, but can't distinguish between functions or classes, so hard to do much else
+    def fix_func_or_class_call(self, match, poss_chars):
+        groups = match.groups()
+        poss_func = poss_chars[match.start(2): match.end(2)]
+        closest, _ = self.levenshtein_closest(poss_func, self.context["functions"] + self.context["classes"])
+        LOGGER.debug(groups)
+        LOGGER.debug("Fixing func/class call. Using {} and {}.".format(*(closest, *groups[2:])))
+
+        # use 3 not 2 because of list 0-index
+        new_args = self.fix_arguments(groups[2], poss_chars[match.start(3): match.end(3)])
+
+        LOGGER.debug("Fixing func/class call arguments from {} to {}".format(groups[2], new_args))
+        return '{}({})'.format(closest, new_args)
+
     def fix_method_call(self, match, poss_chars):
         groups = match.groups()
         poss_var = poss_chars[match.start(2): match.end(2)]
-        # poss_var = self.extract_poss_chars(groups[0], poss_chars, groups[1])
         closest_var, _ = self.levenshtein_closest(poss_var, self.context["variables"])
         LOGGER.debug("Fixing method call var. From {} to {}".format(groups[1], closest_var))
 
         poss_method = poss_chars[match.start(3): match.end(3)]
-        # poss_method = self.extract_poss_chars(groups[0], poss_chars, groups[2])
         closest_method, _ = self.levenshtein_closest(poss_method, self.context["methods"])
         LOGGER.debug("Fixing method call method. From {} to {}".format(groups[2], closest_method))
 
@@ -383,8 +391,10 @@ class CodeFixer:
 
     def fix_assignment(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing assignment. Using {} = {}.".format(*groups[1:]))
-        return '{} = {}'.format(*groups[1:])
+        LOGGER.debug("About to fix RHS of assignment")
+        rhs = self.fix_statement(groups[2], poss_chars[match.start(3): match.end(3)])
+        LOGGER.debug("Fixing assignment. Using {} = {}.".format(groups[1], rhs))
+        return '{} = {}'.format(groups[1], rhs)
 
     def fix_assert(self, match, poss_chars):
         groups = match.groups()
