@@ -42,7 +42,7 @@ class CodeFixer:
         # fix_func -> fixes the str with context var
         self.rules.append(('import (.*)', 7, None, self.fix_import))
         self.rules.append(('import (.*?) as (.*)', 11, None, self.fix_import_as))
-        self.rules.append(('from (.*?) import (.*?)(, .*?)*', 13, None, self.fix_from_import))
+        self.rules.append(('from (.*?) import (.*?)', 13, None, self.fix_from_import))
         self.rules.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
         self.rules.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
         self.rules.append(('if (BOOLEAN):', 4, None, self.fix_if))
@@ -61,7 +61,7 @@ class CodeFixer:
         self.rules.append(('else:', 5, None, lambda x, y: 'else:'))
         self.rules.append(('break', 5, None, lambda x, y: 'break'))
         self.rules.append(('continue', 8, None, lambda x, y: 'continue'))
-        self.rules.append(('(.*)', 0, None, None))  # If nothing else works this will
+        self.rules.append(('(.*)', 0, None, self.fix_default))  # If nothing else works this will
 
         LOGGER.debug('Compiling main rules.')
         self.rules_regexes = self.compile_regex(self.rules)
@@ -98,13 +98,9 @@ class CodeFixer:
         LOGGER.debug('Fixing lines.')
         for idx, closest_match in enumerate(closest_matches):
             (match, _, fix_func) = closest_match
-            if fix_func:
-                fixed = fix_func(match, self.poss_lines[idx])
-                fixed_lines.append(self.naive_fix(fixed))
-            else:
-                groups = match.groups()
-                LOGGER.debug("No match found for {}. Defaulting to not fixing.".format(*groups[1:]))
-                fixed_lines.append('{}'.format(*groups[1:]))
+            fixed = fix_func(match, self.poss_lines[idx])
+            fixed_lines.append(self.naive_fix(fixed))
+
 
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
@@ -281,12 +277,17 @@ class CodeFixer:
         LOGGER.debug("Analysing function def variables. Adding {} to context.".format(variables))
         self.context['variables'].extend(variables)
 
+    def fix_default(self, match, poss_chars):
+        groups = match.groups()
+        LOGGER.debug("No match found for {}. Defaulting to not fixing.".format(groups[0]))
+        return groups[0]
+
     def fix_import(self, match, poss_chars):
         groups = match.groups()
         poss_import = poss_chars[match.start(2): match.end(2)]
-
         closest, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
-        LOGGER.debug("Fixing import. Adding {} to context after analysis.".format(closest))
+        LOGGER.debug("Fixing import. Changing from {} to {}, and adding to context after analysis.".format(groups[1],
+                                                                                                           closest))
         self.context["imports"].append(closest)
         return 'import {}'.format(closest)
 
@@ -294,18 +295,20 @@ class CodeFixer:
         groups = match.groups()
         poss_import = poss_chars[match.start(2): match.end(2)]
         closest_module, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
-        LOGGER.debug("Fixing import as. Adding {} to context after analysis.".format(groups[2]))
-        self.context["imports"].append(groups[2])
+        LOGGER.debug("Fixing import as. Changing from {} to {}, and adding {} "
+                     "to context after analysis.".format(groups[1], closest_module, groups[2]))
+        self.context["imports"].extend(groups[2])
         return 'import {} as {}'.format(closest_module, groups[2])
 
     def fix_from_import(self, match, poss_chars):
         groups = match.groups()
         poss_import = poss_chars[match.start(2): match.end(2)]
         closest_module, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
-        LOGGER.debug("Fixing from X import Y. Adding {} to context after analysis.".format(closest_module))
-        for imported in groups[1:]:
-            self.context["imports"].append(imported)
-        return 'from {} import {}'.format(closest_module, ", ".join(groups[1:]))
+        imported = [i.strip() for i in groups[2].split(",")]
+        LOGGER.debug("Fixing from X import Y. Changing from {} to {}, and adding {}"
+                     " to context after analysis.".format(groups[1], closest_module, imported))
+        self.context["imports"].extend(imported)
+        return 'from {} import {}'.format(closest_module, ", ".join(imported))
 
     def fix_class(self, match, poss_chars):
         groups = match.groups()
