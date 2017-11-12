@@ -10,7 +10,7 @@ from ..utils.singleton import Singleton
 # Mute tensorflow debugging information on console
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-MINIMUM_PROBABILITY = 0.1
+MINIMUM_PROBABILITY = 0.025
 
 
 class OCR(metaclass=Singleton):

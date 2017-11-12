@@ -101,7 +101,6 @@ class CodeFixer:
             fixed = fix_func(match, self.poss_lines[idx])
             fixed_lines.append(self.naive_fix(fixed))
 
-
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
@@ -116,6 +115,7 @@ class CodeFixer:
         distance = sys.maxsize
         closest = None, None, None
         permutations = self.permutations(poss_line)
+        LOGGER.debug('Trying %s permutations', len(permutations))
 
         LOGGER.debug("Checking {} regex fixes for a good match.".format(len(regexes)))
         for r, fixed, analyze, fix in regexes:
@@ -150,8 +150,6 @@ class CodeFixer:
         for char in poss_chars[0][:PERMUTATION_LENGTH]:
             for permutation in permutations:
                 results.append(char + permutation)
-
-        LOGGER.debug('Trying %s permutations', len(permutations))
 
         return results
 
@@ -195,6 +193,7 @@ class CodeFixer:
         """
 
         permutations = self.permutations(poss_chars)
+        LOGGER.debug('Trying %s permutations', len(permutations))
         best = allowed_difference
         recommended = permutations[0]
 
