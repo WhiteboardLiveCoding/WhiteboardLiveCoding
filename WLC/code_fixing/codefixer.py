@@ -8,8 +8,8 @@ from stdlib_list import stdlib_list
 
 from WLC.code_fixing.static import get_functions
 
-PERMUTATION_LENGTH = 2
-ALLOWED_DIFFERENCE = 0.2
+PERMUTATION_LENGTH = 5
+ALLOWED_DIFFERENCE = 0.25
 
 LOGGER = logging.getLogger()
 
@@ -26,8 +26,8 @@ class CodeFixer:
         self.rules = []
         self.statements = []
 
-        self.syntax.append(('VARIABLE', '[a-z_]\w*'))
-        self.syntax.append(('FUNCTION', '[a-z_]\w*'))
+        self.syntax.append(('VARIABLE', '[a-z_]+'))
+        self.syntax.append(('FUNCTION', '[a-z_]+'))
 
         self.syntax.append(('STATEMENT', '.*'))
         self.syntax.append(('BOOLEAN', '.*'))
@@ -128,7 +128,7 @@ class CodeFixer:
                         distance = sum(match.fuzzy_counts) - fixed
                         closest = (match, analyze, fix)
 
-                        if distance < 0:
+                        if sum(match.fuzzy_counts) == 0:
                             return closest
 
         return closest
