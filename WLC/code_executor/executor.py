@@ -7,7 +7,7 @@ import docker
 from ..ocr.picture_ocr import PictureOCR
 from ..code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
 from ..code_executor.redirected_std import redirected_std
-from ..code_fixing.trial_codefixer import TrialCodeFixer
+from ..code_fixing.codefixer import CodeFixer
 from ..image_processing.preprocessor import Preprocessor
 
 LOGGER = logging.getLogger()
@@ -29,7 +29,7 @@ class CodeExecutor:
         image = Preprocessor().process(picture_in)
         code, indents, poss_lines = PictureOCR(image).get_code()
         code = code.lower()
-        fixed_code = TrialCodeFixer(code, indents, poss_lines).fix()
+        fixed_code = CodeFixer(code, indents, poss_lines).fix()
 
         return code, fixed_code
 
