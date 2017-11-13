@@ -9,4 +9,4 @@ COPY ./WLC /app/main
 COPY ./uwsgi.ini /app/uwsgi.ini
 COPY ./requirements.txt /app/requirements.txt
 WORKDIR /app
-RUN pip install -r requirements.txt
+RUN pip install --upgrade -r requirements.txt
