@@ -5,10 +5,11 @@ import traceback
 import docker
 
 from ..ocr.picture_ocr import PictureOCR
-from ..code_executor.executor_error import ExecutorError, PY_STR_ERR_SYNTAX
+from ..code_executor.executor_error import ExecutorError
 from ..code_executor.redirected_std import redirected_std
 from ..code_fixing.codefixer import CodeFixer
-from ..image_processing.preprocessor import Preprocessor
+
+from image_segmentation.preprocessor import Preprocessor
 
 LOGGER = logging.getLogger()
 
