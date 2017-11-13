@@ -4,6 +4,10 @@ machine:
   services:
     - docker
 
+dependencies:
+  pre:
+    - pip install --upgrade -r requirements.txt
+
 test:
   override:
     - pytest WLC/tests.py
