@@ -6,7 +6,7 @@ import editdistance
 import regex
 from stdlib_list import stdlib_list
 
-from WLC.code_fixing.static import get_functions
+from ..code_fixing.static import get_functions
 
 PERMUTATION_LENGTH = 5
 ALLOWED_DIFFERENCE = 0.25
