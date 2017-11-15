@@ -1,4 +1,5 @@
 import json
+from urllib.request import urlopen
 
 import numpy as np
 from cv2 import cv2, IMREAD_COLOR
@@ -6,6 +7,7 @@ from cv2 import cv2, IMREAD_COLOR
 from flask import Flask, render_template
 from flask import request
 from image_segmentation.picture import Picture
+from image_segmentation.preprocessor import Preprocessor
 
 from .code_executor.executor import CodeExecutor
 from .utils.azure import save_image_to_azure, save_code_to_azure
@@ -30,12 +32,7 @@ def api_upload_image():
         saved, key = save_image_to_azure('pictures', pic.get_image())
 
         code, fixed_code, result, error = CodeExecutor().execute_code_img(pic)
-
-        ar = {
-            'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
-            'line': pic.get_line_coordinates(error.get_line()),
-            'character': pic.get_character_coordinates(error.get_line(), error.get_column())
-        }
+        ar = _get_ar_coordinates(pic, error)
 
         response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key, 'ar': ar}
 
@@ -50,12 +47,33 @@ def api_resubmit_code():
         code = request.json.get('code')
         result, error = CodeExecutor().execute_code(code)
 
-        if request.json.get('key'):
-            save_code_to_azure('code', 'pictures', request.json.get('key'), code)
+        key = request.json.get('key')
+        image = _url_to_image('https://alpstore.blob.core.windows.net/pictures/{}'.format(key))
+        height, width, _ = image.shape
+        pic = Picture(image, 0, 0, width, height)
+        pic = Preprocessor().process(pic)
+        pic.get_segments()
+        ar = _get_ar_coordinates(pic, error)
 
-        return json.dumps({'result': str(result), 'error': str(error)})
+        save_code_to_azure('code', 'pictures', key, code)
+
+        return json.dumps({'result': str(result), 'error': str(error), 'ar': ar})
     else:
         return render_template('resubmit_test.html')
+
+
+def _get_ar_coordinates(pic, error):
+    return {
+        'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
+        'line': pic.get_line_coordinates(error.get_line()),
+        'character': pic.get_character_coordinates(error.get_line(), error.get_column())
+    }
+
+
+def _url_to_image(url):
+    resp = urlopen(url)
+    image = np.asarray(bytearray(resp.read()), dtype="uint8")
+    return cv2.imdecode(image, cv2.IMREAD_COLOR)
 
 
 if __name__ == "__main__":
