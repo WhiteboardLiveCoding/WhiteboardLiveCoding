@@ -56,6 +56,6 @@ class Camera:
         to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
 
         if not image_path:
-            image_path = 'assets/examples/images/class.png'
+            image_path = 'assets/examples/images/docker.jpg'
 
         return self.read_file(image_path, to_show)

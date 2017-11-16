@@ -50,8 +50,10 @@ def arguments():
     return show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate
 
 
-def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip="",
-         annotate=False):
+def main():
+
+    show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate = arguments()
+
     picture_path = None
 
     if show_gui:
@@ -81,6 +83,5 @@ if __name__ == '__main__':
     LOGGER.setLevel(logging.INFO)
     LOGGER.info("Welcome to Live Whiteboard Coding!")
 
-    show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate = arguments()
-    main(show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate)
+    main()
 
