@@ -1,0 +1,2 @@
+print(fico.smer())
+x = (i+j /3) == 1

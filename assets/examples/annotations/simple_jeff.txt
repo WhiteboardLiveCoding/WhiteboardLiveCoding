@@ -1,0 +1,5 @@
+import sys
+def jeff():
+    return None
+jeff()
+print(sys.path.join(__file__))

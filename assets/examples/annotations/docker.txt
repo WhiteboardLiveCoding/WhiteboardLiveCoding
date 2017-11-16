@@ -1,0 +1,2 @@
+import docker
+    docker.images(destroy)
