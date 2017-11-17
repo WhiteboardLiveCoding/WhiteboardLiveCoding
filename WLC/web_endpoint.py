@@ -57,7 +57,7 @@ def api_resubmit_code():
 
         save_code_to_azure('code', 'pictures', key, code)
 
-        return json.dumps({'result': str(result), 'error': str(error), 'ar': ar})
+        return json.dumps({'result': str(result), 'error': str(error), 'ar': ar, 'key': key})
     else:
         return render_template('resubmit_test.html')
 
