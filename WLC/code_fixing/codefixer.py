@@ -37,6 +37,10 @@ class CodeFixer:
         self.statements.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_func_or_class_call))
         self.statements.append(('(VARIABLE)\.(FUNCTION)\((STATEMENT)\)', 3, None, self.fix_method_call))
         self.statements.append(('(VARIABLE)', 0, None, self.fix_variable))
+        self.statements.append(('(STATEMENT) for (VARIABLE) in (STATEMENT)', 9, None, self.fix_generator))
+        self.statements.append(('\[(STATEMENT) for (VARIABLE) in (STATEMENT)\]', 11, None, self.fix_list_comp))
+        self.statements.append(('(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)', 16, None, self.fix_range_generator))
+        self.statements.append(('\[(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)\]', 18, None, self.fix_range_list_comp))
 
         # self.rules: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
         # analysis -> goes over result and gets any context var
@@ -280,7 +284,8 @@ class CodeFixer:
 
         for idx, char in enumerate(args):
             if char == "," and openBR == 0:
-                arguments.append((args[prev: idx], prev, idx))
+                new_match = CustomMatch(args[prev: idx], prev, idx)
+                arguments.append(new_match)
                 prev = idx + 1
                 while args[prev] == " ":
                     prev += 1
@@ -289,7 +294,8 @@ class CodeFixer:
             elif char == ")":
                 openBR -= 1
         else:
-            arguments.append((args[prev:], prev, len(args)))
+            new_match = CustomMatch(args[prev:], prev, len(args))
+            arguments.append(new_match)
 
         return arguments
 
@@ -441,7 +447,7 @@ class CodeFixer:
     def fix_assignment(self, match, poss_chars):
         groups = match.groups()
         LOGGER.debug("About to fix RHS of assignment")
-        rhs = self.fix_statement(groups[2], poss_chars[match.start(3): match.end(3)])
+        rhs = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)), poss_chars[match.start(3): match.end(3)])
         LOGGER.debug("Fixing assignment. Using {} = {}.".format(groups[1], rhs))
         return '{} = {}'.format(groups[1], rhs)
 
@@ -471,28 +477,86 @@ class CodeFixer:
         LOGGER.debug("Fixing {} arguments: {}".format(len(arg_matches), arg_matches))
         result = []
         for match in arg_matches:
-            arg = match[0]
-            start = match[1]
-            end = match[2]
-            new_arg = self.fix_statement(arg, poss_chars[start: end])  # when variable.
-            LOGGER.debug("Fixing argument {} to {}".format(arg, new_arg))
+            new_arg = self.fix_statement(match, poss_chars[match.start(1): match.end(1)])  # when variable.
+            LOGGER.debug("Fixing argument {} to {}".format(match.groups()[0], new_arg))
             result.append(new_arg)
 
         return ", ".join(result)
 
-    def fix_statement(self, matched_text, poss_chars):
-        match, analyze_func, fix_func = self.find_closest_match(poss_chars, self.statements_regexes)
+    def fix_statement(self, match, poss_chars):
+        matched, analyze_func, fix_func = self.find_closest_match(poss_chars, self.statements_regexes)
 
         if fix_func:
-            fixed = fix_func(match, poss_chars)
+            fixed = fix_func(matched, poss_chars)
         else:
-            LOGGER.debug("No match for {}. Not fixing.".format(matched_text))
-            fixed = matched_text
+            LOGGER.debug("No match for {}. Not fixing.".format(match.groups()[0]))
+            fixed = match.groups()[0]
 
         return fixed
 
     # TODO: ensure we don't fix non-vars
-    def fix_variable(self, matched_text, poss_chars):
+    def fix_variable(self, match, poss_chars):
         closest, _ = self.levenshtein_closest(poss_chars, self.context["variables"])
-        LOGGER.debug("Fixing variable {} to {}.".format(matched_text, closest))
+        LOGGER.debug("Fixing variable {} to {}.".format(match.groups()[0], closest))
         return closest
+
+    def fix_range_generator(self, match, poss_chars):
+        groups = match.groups()
+
+        var = self.fix_variable(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                poss_chars[match.start(3): match.end(3)])
+        LOGGER.debug("Fixing range generator var from {} to {}".format(groups[2], var))
+
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing range generator result from {} to {}".format(groups[0], stmt))
+
+        stmt2 = self.fix_statement(CustomMatch(groups[3], match.start(4), match.end(4)),
+                                   poss_chars[match.start(4): match.end(4)])
+        LOGGER.debug("Fixing range generator iterator from {} to {}".format(groups[3], stmt2))
+
+        return "{} for {} in range({})".format(stmt, var, stmt2)
+
+    def fix_generator(self, match, poss_chars):
+        groups = match.groups()
+
+        var = self.fix_variable(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                poss_chars[match.start(3): match.end(3)])
+        LOGGER.debug("Fixing generator var from {} to {}".format(groups[2], var))
+
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing generator result from {} to {}".format(groups[0], stmt))
+
+        stmt2 = self.fix_statement(CustomMatch(groups[3], match.start(4), match.end(4)),
+                                   poss_chars[match.start(4): match.end(4)])
+        LOGGER.debug("Fixing generator iterator from {} to {}".format(groups[3], stmt2))
+
+        return "{} for {} in {}".format(stmt, var, stmt2)
+
+    def fix_range_list_comp(self, match, poss_chars):
+        return "[{}]".format(self.fix_range_generator(match, poss_chars[1:len(poss_chars)-1]))
+
+    def fix_list_comp(self, match, poss_chars):
+        return "[{}]".format(self.fix_generator(match, poss_chars[1:len(poss_chars)-1]))
+
+
+class CustomMatch(object):
+    def __init__(self, arg, start, end):
+        self._args = [arg]
+        self._start = [start]
+        self._end = [end]
+
+    def groups(self):
+        return self._args
+
+    def start(self, n):
+        return self._start[n - 1]
+
+    def end(self, n):
+        return self._end[n - 1]
+
+    def add(self, arg, start, end):
+        self._args.append(arg)
+        self._start.append(start)
+        self._end.append(end)
