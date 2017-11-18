@@ -1,3 +1,4 @@
+import importlib
 import logging
 import sys
 from itertools import tee
@@ -428,21 +429,41 @@ class CodeFixer:
 
     def fix_method_call(self, match, poss_chars):
         groups = match.groups()
-        poss_var = poss_chars[match.start(2): match.end(2)]
-        closest_var, _ = self.levenshtein_closest(poss_var, self.context["variables"])
-        LOGGER.debug("Fixing method call var. From {} to {}".format(groups[1], closest_var))
-
+        poss_callable = poss_chars[match.start(2): match.end(2)]
         poss_method = poss_chars[match.start(3): match.end(3)]
-        closest_method, _ = self.levenshtein_closest(poss_method, self.context["methods"])
-        LOGGER.debug("Fixing method call method. From {} to {}".format(groups[2], closest_method))
 
-        closests_args = [
-            self.levenshtein_closest(poss_arg, self.context["variables"])[0] for poss_arg
-            in (poss_chars[match.start(group_n): match.end(group_n)] for group_n in range(4, len(groups)+1))
-        ]
-        LOGGER.debug("Fixing method call args. From {} to {}.".format(groups[3], closests_args))
+        closest_var, distance_var = self.levenshtein_closest(poss_callable, self.context["variables"])
+        closest_import, distance_import = self.levenshtein_closest(poss_callable, self.context["imports"])
 
-        return '{}.{}({})'.format(closest_var, closest_method, *closests_args)
+        # Check if its more likely to be a call on a custom variable, or an import.
+        if distance_var <= distance_import:
+            # is a var -> harder to check method -> TODO?
+            closest_callable = closest_var
+            LOGGER.debug("Fixing method call var. From {} to {}".format(groups[1], closest_var))
+
+            closest_method, _ = self.levenshtein_closest(poss_method, self.context["methods"])
+            LOGGER.debug("Fixing method call method. From {} to {}".format(groups[2], closest_method))
+        else:
+            # is an import -> method can be checked if __all__ is present
+            # TODO: workaround __all__ not being present
+            closest_callable = closest_import
+            LOGGER.debug("Method call was found to be on an import!")
+            LOGGER.debug("Fixing method call var. From {} to {}".format(groups[1], closest_import))
+
+            imported = importlib.import_module(closest_import)
+            if hasattr(imported, "__all__"):
+                closest_method, _ = self.levenshtein_closest(poss_method, imported.__all__)
+            else:
+                closest_method = groups[2]
+            del imported
+
+            LOGGER.debug("Fixing method call method. From {} to {}".format(groups[2], closest_method))
+
+        closest_args = self.fix_arguments(groups[3], poss_chars[match.start(4): match.end(4)])
+
+        LOGGER.debug("Fixing method call args. From {} to {}.".format(groups[3], closest_args))
+
+        return '{}.{}({})'.format(closest_callable, closest_method, closest_args)
 
     def fix_assignment(self, match, poss_chars):
         groups = match.groups()
