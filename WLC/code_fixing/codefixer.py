@@ -1,5 +1,6 @@
 import logging
 import sys
+from itertools import tee
 from math import log, floor, ceil
 
 import editdistance
@@ -114,11 +115,13 @@ class CodeFixer:
         """
         distance = sys.maxsize
         closest = None, None, None
-        permutations = self.permutations(poss_line)
-        LOGGER.debug('Trying %s permutations', len(permutations))
+        permutations_main = self.permutations(poss_line)
+        LOGGER.debug('Permutating.')
 
         LOGGER.debug("Checking {} regex fixes for a good match.".format(len(regexes)))
         for r, fixed, analyze, fix in regexes:
+            # duplicate generator to reuse it at each iteration.
+            permutations, permutations_main = tee(permutations_main)
             for possible in permutations:
                 match = r.match(possible)
 
@@ -166,7 +169,6 @@ class CodeFixer:
         """
         if not poss_chars:
             return ['']
-        results = []
 
         if perm_count <= perm_cap:
             current_perm_length = PERMUTATION_LENGTH
@@ -180,11 +182,7 @@ class CodeFixer:
             new_count = perm_count / len(poss_chars[0][:PERMUTATION_LENGTH])
             permutations = self.generate_permutation_strings(poss_chars[1:], new_cap, new_count, perm_length - 1)
 
-        for char in poss_chars[0][:current_perm_length]:
-            for permutation in permutations:
-                results.append(char + permutation)
-
-        return results
+        return (char + permutation for permutation in permutations for char in poss_chars[0][:current_perm_length])
 
     def permutations(self, poss_chars):
         """
@@ -239,11 +237,14 @@ class CodeFixer:
         """
 
         permutations = self.permutations(poss_chars)
-        LOGGER.debug('Trying %s permutations', len(permutations))
+        LOGGER.debug('Permutating.')
         best = allowed_difference
-        recommended = permutations[0]
+        recommended = None
 
         for permutation in permutations:
+            if not recommended:
+                recommended = permutation
+
             for possibility in possibilities:
                 distance = editdistance.eval(permutation, possibility) / (len(possibility) or 1)
 
