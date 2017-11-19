@@ -39,12 +39,16 @@ class CodeFixer:
         self.statements.append(('(VARIABLE)', 0, None, self.fix_variable))
         self.statements.append(('(STATEMENT) for (VARIABLE) in (STATEMENT)', 9, None, self.fix_generator))
         self.statements.append(('\[(STATEMENT) for (VARIABLE) in (STATEMENT)\]', 11, None, self.fix_list_comp))
-        self.statements.append(('(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)', 16, None, self.fix_range_generator))
-        self.statements.append(('\[(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)\]', 18, None, self.fix_range_list_comp))
+        self.statements.append(
+            ('(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)', 16, None, self.fix_range_generator))
+        self.statements.append(
+            ('\[(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)\]', 18, None, self.fix_range_list_comp))
         self.statements.append(('True', 4, None, lambda x, y: "True"))
         self.statements.append(('False', 5, None, lambda x, y: "False"))
         self.statements.append(('None', 4, None, lambda x, y: "None"))
-        self.statements.append(('(STATEMENT) == (STATEMENT)', 4, None, self.fix_eq))
+
+        # Add +, - / and * at the same time as this -> check how the size can be changed
+        # self.statements.append(('(STATEMENT) == (STATEMENT)', 4, None, self.fix_eq))
 
         # self.rules: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
         # analysis -> goes over result and gets any context var
@@ -184,7 +188,7 @@ class CodeFixer:
             current_perm_length = floor(10 ** (log(perm_cap, 10) / perm_count))
 
         if len(poss_chars[0]) == 1:
-            permutations = self.generate_permutation_strings(poss_chars[1:], perm_cap, perm_count,  perm_length)
+            permutations = self.generate_permutation_strings(poss_chars[1:], perm_cap, perm_count, perm_length)
         else:
             new_cap = perm_cap / len(poss_chars[0][:current_perm_length])
             new_count = perm_count / len(poss_chars[0][:PERMUTATION_LENGTH])
@@ -375,33 +379,56 @@ class CodeFixer:
 
     def fix_if(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing if. Using {}.".format(*groups[1:]))
-        return 'if {}:'.format(*groups[1:])
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing if. From {} to {}.".format(groups[1], stmt))
+        return 'if {}:'.format(stmt)
 
     def fix_elif(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing elif. Using {}.".format(*groups[1:]))
-        return 'elif {}:'.format(*groups[1:])
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing elif. From {} to {}.".format(groups[1], stmt))
+        return 'elif {}:'.format(stmt)
 
     def fix_return(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing return. Using {}.".format(*groups[1:]))
-        return 'return {}'.format(*groups[1:])
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing return. From {} to {}.".format(groups[1], stmt))
+        return 'return {}'.format(stmt)
 
     def fix_while(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing while. Using {}.".format(*groups[1:]))
-        return 'while {}:'.format(*groups[1:])
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing while. From {} to {}.".format(groups[1], stmt))
+        return 'while {}:'.format(stmt)
 
     def fix_for(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing for. Using {} and {}.".format(*groups[1:]))
-        return 'for {} in {}:'.format(*groups[1:])
+
+        var = self.fix_variable(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing for loop var from {} to {}".format(groups[1], var))
+
+        stmt = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                  poss_chars[match.start(3): match.end(3)])
+        LOGGER.debug("Fixing for loop stmt from {} to {}".format(groups[2], stmt))
+
+        return 'for {} in {}:'.format(var, stmt)
 
     def fix_for_range(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing for range. Using {} and {}.".format(*groups[1:]))
-        return 'for {} in range({}):'.format(*groups[1:])
+        var = self.fix_variable(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing for range loop var from {} to {}".format(groups[1], var))
+
+        stmt = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                  poss_chars[match.start(3): match.end(3)])
+        LOGGER.debug("Fixing for range loop stmt from {} to {}".format(groups[2], stmt))
+
+        return 'for {} in range({}):'.format(var, stmt)
 
     def fix_function_call(self, match, poss_chars):
         groups = match.groups()
@@ -471,27 +498,33 @@ class CodeFixer:
     def fix_assignment(self, match, poss_chars):
         groups = match.groups()
         LOGGER.debug("About to fix RHS of assignment")
-        rhs = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)), poss_chars[match.start(3): match.end(3)])
+        rhs = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                 poss_chars[match.start(3): match.end(3)])
         LOGGER.debug("Fixing assignment. Using {} = {}.".format(groups[1], rhs))
         return '{} = {}'.format(groups[1], rhs)
 
     def fix_assert(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing assert. Using {}.".format(*groups[1:]))
-        return 'assert {}'.format(*groups[1:])
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing assert. From {} to {}.".format(groups[1], stmt))
+        return 'assert {}'.format(stmt)
 
     def fix_del(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing del. Using {}.".format(*groups[1:]))
-        return 'del {}'.format(*groups[1:])
+        stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                  poss_chars[match.start(2): match.end(2)])
+        LOGGER.debug("Fixing del. From {} to {}.".format(groups[1], stmt))
+        return 'del {}'.format(stmt)
 
     def fix_raise(self, match, poss_chars):
         groups = match.groups()
-        LOGGER.debug("Fixing raise. Using {}.".format(*groups[1:]))
+        LOGGER.debug("Fixing raise. From {} to {}.".format(*groups[1:]))
         return 'raise {}'.format(*groups[1:])
 
     def fix_def(self, match, poss_chars):
         groups = match.groups()
+        # TODO: set curr scope with the parsed args and rm later.
         LOGGER.debug("Fixing def. Using {} and {}.".format(*groups[1:]))
         return 'def {}({}):'.format(*groups[1:])
 
@@ -531,6 +564,7 @@ class CodeFixer:
                                 poss_chars[match.start(3): match.end(3)])
         LOGGER.debug("Fixing range generator var from {} to {}".format(groups[2], var))
 
+        # NOTE: fix_for returns an extra : so would be invalid.
         stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
                                   poss_chars[match.start(2): match.end(2)])
         LOGGER.debug("Fixing range generator result from {} to {}".format(groups[0], stmt))
@@ -544,13 +578,14 @@ class CodeFixer:
     def fix_generator(self, match, poss_chars):
         groups = match.groups()
 
-        var = self.fix_variable(CustomMatch(groups[2], match.start(3), match.end(3)),
-                                poss_chars[match.start(3): match.end(3)])
-        LOGGER.debug("Fixing generator var from {} to {}".format(groups[2], var))
-
         stmt = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
                                   poss_chars[match.start(2): match.end(2)])
         LOGGER.debug("Fixing generator result from {} to {}".format(groups[0], stmt))
+
+        # NOTE: fix_for returns an extra : so would be invalid.
+        var = self.fix_variable(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                poss_chars[match.start(3): match.end(3)])
+        LOGGER.debug("Fixing generator var from {} to {}".format(groups[2], var))
 
         stmt2 = self.fix_statement(CustomMatch(groups[3], match.start(4), match.end(4)),
                                    poss_chars[match.start(4): match.end(4)])
@@ -560,11 +595,11 @@ class CodeFixer:
 
     def fix_range_list_comp(self, match, poss_chars):
         LOGGER.debug("Fixing range list comprehension: {}".format(match.groups()[0]))
-        return "[{}]".format(self.fix_range_generator(match, poss_chars[1:len(poss_chars)-1]))
+        return "[{}]".format(self.fix_range_generator(match, poss_chars[1:len(poss_chars) - 1]))
 
     def fix_list_comp(self, match, poss_chars):
         LOGGER.debug("Fixing list comprehension: {}".format(match.groups()[0]))
-        return "[{}]".format(self.fix_generator(match, poss_chars[1:len(poss_chars)-1]))
+        return "[{}]".format(self.fix_generator(match, poss_chars[1:len(poss_chars) - 1]))
 
     def fix_eq(self, match, poss_chars):
         groups = match.groups()
