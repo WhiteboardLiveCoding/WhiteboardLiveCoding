@@ -32,7 +32,6 @@ class CodeFixer:
         self.syntax.append(('FUNCTION', '[a-z_]+'))
 
         self.syntax.append(('STATEMENT', '.*'))
-        self.syntax.append(('BOOLEAN', '.*'))
         self.syntax.append(('PARAMETERS', '.*'))
 
         self.statements.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_func_or_class_call))
@@ -42,6 +41,10 @@ class CodeFixer:
         self.statements.append(('\[(STATEMENT) for (VARIABLE) in (STATEMENT)\]', 11, None, self.fix_list_comp))
         self.statements.append(('(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)', 16, None, self.fix_range_generator))
         self.statements.append(('\[(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)\]', 18, None, self.fix_range_list_comp))
+        self.statements.append(('True', 4, None, lambda x, y: "True"))
+        self.statements.append(('False', 5, None, lambda x, y: "False"))
+        self.statements.append(('None', 4, None, lambda x, y: "None"))
+        self.statements.append(('(STATEMENT) == (STATEMENT)', 4, None, self.fix_eq))
 
         # self.rules: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
         # analysis -> goes over result and gets any context var
@@ -51,10 +54,10 @@ class CodeFixer:
         self.rules.append(('from (.*?) import (.*?)', 13, None, self.fix_from_import))
         self.rules.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
         self.rules.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
-        self.rules.append(('if (BOOLEAN):', 4, None, self.fix_if))
-        self.rules.append(('elif (BOOLEAN):', 6, None, self.fix_elif))
+        self.rules.append(('if (STATEMENT):', 4, None, self.fix_if))
+        self.rules.append(('elif (STATEMENT):', 6, None, self.fix_elif))
         self.rules.append(('return (STATEMENT)', 7, None, self.fix_return))
-        self.rules.append(('while (BOOLEAN):', 7, None, self.fix_while))
+        self.rules.append(('while (STATEMENT):', 7, None, self.fix_while))
         self.rules.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
         self.rules.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
         self.rules.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
@@ -556,10 +559,22 @@ class CodeFixer:
         return "{} for {} in {}".format(stmt, var, stmt2)
 
     def fix_range_list_comp(self, match, poss_chars):
+        LOGGER.debug("Fixing range list comprehension: {}".format(match.groups()[0]))
         return "[{}]".format(self.fix_range_generator(match, poss_chars[1:len(poss_chars)-1]))
 
     def fix_list_comp(self, match, poss_chars):
+        LOGGER.debug("Fixing list comprehension: {}".format(match.groups()[0]))
         return "[{}]".format(self.fix_generator(match, poss_chars[1:len(poss_chars)-1]))
+
+    def fix_eq(self, match, poss_chars):
+        groups = match.groups()
+        stmt1 = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                   poss_chars[match.start(2): match.end(2)])
+        stmt2 = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                   poss_chars[match.start(3): match.end(3)])
+
+        LOGGER.debug("Fixing equality from {} == {} to {} == {}".format(groups[1], groups[2], stmt1, stmt2))
+        return "{} == {}".format(stmt1, stmt2)
 
 
 class CustomMatch(object):
