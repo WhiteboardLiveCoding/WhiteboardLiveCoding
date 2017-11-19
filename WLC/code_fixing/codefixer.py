@@ -43,9 +43,9 @@ class CodeFixer:
             ('(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)', 16, None, self.fix_range_generator))
         self.statements.append(
             ('\[(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)\]', 18, None, self.fix_range_list_comp))
-        self.statements.append(('True', 4, None, lambda x, y: "True"))
-        self.statements.append(('False', 5, None, lambda x, y: "False"))
-        self.statements.append(('None', 4, None, lambda x, y: "None"))
+        self.statements.append(('true', 4, None, lambda x, y: "True"))
+        self.statements.append(('false', 5, None, lambda x, y: "False"))
+        self.statements.append(('none', 4, None, lambda x, y: "None"))
 
         # Add +, - / and * at the same time as this -> check how the size can be changed
         # self.statements.append(('(STATEMENT) == (STATEMENT)', 4, None, self.fix_eq))

@@ -33,7 +33,7 @@ def benchmark_file(file_name):
         fixed_code = code
 
     difference = editdistance.eval("".join(code.split()), "".join(expected_code.split()))
-    difference_fixed = editdistance.eval("".join(fixed_code.split()), "".join(expected_code.split()))
+    difference_fixed = editdistance.eval("".join(fixed_code.lower().split()), "".join(expected_code.split()))
 
     length = len("".join(expected_code.split()))
     accuracy = round(100 - (difference * 100 / length))
