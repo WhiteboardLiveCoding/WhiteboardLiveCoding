@@ -1,3 +1,4 @@
+import collections
 import importlib
 import logging
 import sys
@@ -21,22 +22,34 @@ class CodeFixer:
         self.code = code
         self.indents = indents
         self.poss_lines = poss_lines
-        self.context = {'variables': [], 'functions': get_functions(), 'classes': [], 'imports': [], 'methods': []}
-        self.in_class = False
-        self.class_indent = 0
+
         self.syntax = []
         self.rules = []
         self.statements = []
 
+        self.curr_line_n = 0
+        self.context = {'variables': [], 'functions': get_functions(), 'classes': [], 'imports': [], 'methods': []}
+
+        self.class_indent = 0
+        self.class_context = collections.defaultdict(lambda: collections.defaultdict(list))
+        self.curr_class = None
+
+        self.def_indent = 0
+        self.def_context = collections.defaultdict(lambda: collections.defaultdict(list))
+        self.curr_def = None
+
         self.syntax.append(('VARIABLE', '[a-z_]+'))
         self.syntax.append(('FUNCTION', '[a-z_]+'))
 
-        self.syntax.append(('STATEMENT', '.*'))
+        self.syntax.append(('STATEMENT', '.+?'))  # Note - should be '.+?' or '.+' ?
         self.syntax.append(('PARAMETERS', '.*'))
 
-        self.statements.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_func_or_class_call))
-        self.statements.append(('(VARIABLE)\.(FUNCTION)\((STATEMENT)\)', 3, None, self.fix_method_call))
+        self.statements.append(('(FUNCTION)\((PARAMETERS)\)', 2, None, self.fix_func_or_class_call))
+        self.statements.append(('(VARIABLE)\.(FUNCTION)\((PARAMETERS)\)', 3, None, self.fix_method_call))
         self.statements.append(('(VARIABLE)', 0, None, self.fix_variable))
+        self.statements.append(('(STATEMENT) and (STATEMENT)', 5, None, self.fix_and))
+        self.statements.append(('(STATEMENT) or (STATEMENT)', 4, None, self.fix_or))
+        self.statements.append(('not (STATEMENT)', 4, None, self.fix_not))
         self.statements.append(('(STATEMENT) for (VARIABLE) in (STATEMENT)', 9, None, self.fix_generator))
         self.statements.append(('\[(STATEMENT) for (VARIABLE) in (STATEMENT)\]', 11, None, self.fix_list_comp))
         self.statements.append(
@@ -47,15 +60,20 @@ class CodeFixer:
         self.statements.append(('false', 5, None, lambda x, y: "False"))
         self.statements.append(('none', 4, None, lambda x, y: "None"))
 
-        # Add +, - / and * at the same time as this -> check how the size can be changed
+        # check how the size can be changed to account for spaces.
+        # self.statements.append(('\((STATEMENT)\)', 2, None, self.fix_bracketed))
         # self.statements.append(('(STATEMENT) == (STATEMENT)', 4, None, self.fix_eq))
+        # self.statements.append(('(STATEMENT) + (STATEMENT)', 3, None, self.fix_add))
+        # self.statements.append(('(STATEMENT) - (STATEMENT)', 3, None, self.fix_sub))
+        # self.statements.append(('(STATEMENT) * (STATEMENT)', 3, None, self.fix_mul))
+        # self.statements.append(('(STATEMENT) / (STATEMENT)', 3, None, self.fix_div))
 
         # self.rules: list of quad-tuples (string to match, number of fixed, analysis_func, fix_func)
         # analysis -> goes over result and gets any context var
         # fix_func -> fixes the str with context var
         self.rules.append(('import (.*)', 7, None, self.fix_import))
         self.rules.append(('import (.*?) as (.*)', 11, None, self.fix_import_as))
-        self.rules.append(('from (.*?) import (.*?)', 13, None, self.fix_from_import))
+        self.rules.append(('from (.*?) import (.*)', 13, None, self.fix_from_import))
         self.rules.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
         self.rules.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
         self.rules.append(('if (STATEMENT):', 4, None, self.fix_if))
@@ -64,8 +82,9 @@ class CodeFixer:
         self.rules.append(('while (STATEMENT):', 7, None, self.fix_while))
         self.rules.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
         self.rules.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
-        self.rules.append(('(FUNCTION)\((STATEMENT)\)', 2, None, self.fix_function_call))
-        self.rules.append(('(VARIABLE)\.(FUNCTION)\((STATEMENT)\)', 3, None, self.fix_method_call))
+        self.rules.append(('(FUNCTION)\((PARAMETERS)\)', 2, None, self.fix_function_call))
+        self.rules.append(('(VARIABLE)\.(FUNCTION)\((PARAMETERS)\)', 3, None, self.fix_method_call))
+        self.rules.append(('self\.(FUNCTION)\((PARAMETERS)\)', 7, None, self.fix_self_method_call))
         self.rules.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
         self.rules.append(('assert (STATEMENT)', 7, None, self.fix_assert))
         self.rules.append(('del (STATEMENT)', 4, None, self.fix_del))
@@ -99,18 +118,32 @@ class CodeFixer:
             closest_match = self.find_closest_match(self.poss_lines[i], self.rules_regexes)
             (match, analyze_func, _) = closest_match
 
+            # At each line, check if currently in a class declaration.
+            if self.indents[i] < self.class_indent and self.curr_class:
+                self.curr_class = None
+
+            if self.indents[i] < self.def_indent and self.curr_def:
+                self.curr_def = None
+
             if analyze_func:
                 analyze_func(match.groups(), i)
 
-            # At each line, check if currently in a class declaration.
-            if self.indents[i] < self.class_indent and self.in_class:
-                self.in_class = False
-
             closest_matches.append(closest_match)
+
+        self.curr_def = None
+        self.curr_class = None
 
         LOGGER.debug('Fixing lines.')
         for idx, closest_match in enumerate(closest_matches):
             (match, _, fix_func) = closest_match
+
+            # At each line, check if currently in a class declaration.
+            if self.indents[i] < self.class_indent and self.curr_class:
+                self.curr_class = None
+
+            if self.indents[i] < self.def_indent and self.curr_def:
+                self.curr_def = None
+
             fixed = fix_func(match, self.poss_lines[idx])
             fixed_lines.append(self.naive_fix(fixed))
 
@@ -311,8 +344,8 @@ class CodeFixer:
     def analyze_class(self, groups, line_n):
         LOGGER.debug("Analysing class. Adding {} to context.".format(groups[1]))
         self.context['classes'].append(groups[1])
-        self.in_class = True
         self.class_indent = self.indents[line_n]
+        self.curr_class = groups[1]
 
     def analyze_for_range(self, groups, line_n):
         LOGGER.debug("Analysing range. Adding {} to context.".format(groups[1]))
@@ -324,18 +357,28 @@ class CodeFixer:
 
     def analyze_assignment(self, groups, line_n):
         LOGGER.debug("Analysing assignment. Adding {} to context.".format(groups[1]))
-        self.context['variables'].append(groups[1])
+        if self.indents[line_n] <= self.def_indent and self.curr_def:
+            self.def_context[self.curr_def]['variables'].append(groups[1])
+        elif self.indents[line_n] <= self.class_indent and self.curr_class:
+            self.class_context[self.curr_class]['variables'].append(groups[1])
+        else:
+            self.context['variables'].append(groups[1])
 
     def analyze_def(self, groups, line_n):
-        LOGGER.debug("Analysing function def. Adding {} to context.".format(groups[1]))
+        LOGGER.debug("Analysing function def. Adding {} to context, and setting class context.".format(groups[1]))
         # differentiate between functions and class methods
-        if self.indents[line_n] <= self.class_indent and self.in_class:
+        self.def_indent = self.indents[line_n]
+        self.curr_def = groups[1]
+
+        if self.indents[line_n] <= self.class_indent and self.curr_class:
             self.context['methods'].append(groups[1])
+            self.class_context[self.curr_class]['methods'].append(groups[1])
         else:
             self.context['functions'].append(groups[1])
         variables = groups[2].split(',')
-        LOGGER.debug("Analysing function def variables. Adding {} to context.".format(variables))
-        self.context['variables'].extend(variables)
+        LOGGER.debug("Analysing function def variables. Adding {} to def context.".format(variables))
+
+        self.def_context[self.curr_def]['variables'].extend(variables)
 
     def fix_default(self, match, poss_chars):
         groups = match.groups()
@@ -495,6 +538,12 @@ class CodeFixer:
 
         return '{}.{}({})'.format(closest_callable, closest_method, closest_args)
 
+    def fix_self_method_call(self, match, poss_chars):
+        groups = match.groups()
+        poss_method = poss_chars[match.start(2): match.end(2)]
+        closest_method, _ = self.levenshtein_closest(poss_method, self.class_context[self.curr_class]["methods"])
+        LOGGER.debug("Fixing method call method. From {} to {}".format(groups[2], closest_method))
+
     def fix_assignment(self, match, poss_chars):
         groups = match.groups()
         LOGGER.debug("About to fix RHS of assignment")
@@ -601,15 +650,47 @@ class CodeFixer:
         LOGGER.debug("Fixing list comprehension: {}".format(match.groups()[0]))
         return "[{}]".format(self.fix_generator(match, poss_chars[1:len(poss_chars) - 1]))
 
-    def fix_eq(self, match, poss_chars):
+    # def fix_eq(self, match, poss_chars):
+    #     groups = match.groups()
+    #     stmt1 = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+    #                                poss_chars[match.start(2): match.end(2)])
+    #     stmt2 = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
+    #                                poss_chars[match.start(3): match.end(3)])
+    #
+    #     LOGGER.debug("Fixing equality from {} == {} to {} == {}".format(groups[1], groups[2], stmt1, stmt2))
+    #     return "{} == {}".format(stmt1, stmt2)
+    #
+    # def fix_bracketed(self, match, poss_chars):
+    #     LOGGER.debug("Fixing bracketed {}".format(match.groups()[0]))
+    #     return ""
+
+    def fix_and(self, match, poss_chars):
         groups = match.groups()
         stmt1 = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
                                    poss_chars[match.start(2): match.end(2)])
         stmt2 = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
                                    poss_chars[match.start(3): match.end(3)])
 
-        LOGGER.debug("Fixing equality from {} == {} to {} == {}".format(groups[1], groups[2], stmt1, stmt2))
-        return "{} == {}".format(stmt1, stmt2)
+        LOGGER.debug("Fixing '{} and {}' to '{} and {}'".format(groups[1], groups[2], stmt1, stmt2))
+        return "{} and {}".format(stmt1, stmt2)
+
+    def fix_or(self, match, poss_chars):
+        groups = match.groups()
+        stmt1 = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                   poss_chars[match.start(2): match.end(2)])
+        stmt2 = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                   poss_chars[match.start(3): match.end(3)])
+
+        LOGGER.debug("Fixing '{} or {}' to '{} or {}'".format(groups[1], groups[2], stmt1, stmt2))
+        return "{} or {}".format(stmt1, stmt2)
+
+    def fix_not(self, match, poss_chars):
+        groups = match.groups()
+        stmt1 = self.fix_statement(CustomMatch(groups[1], match.start(2), match.end(2)),
+                                   poss_chars[match.start(2): match.end(2)])
+
+        LOGGER.debug("Fixing 'not {}' to 'not {}'".format(groups[1], stmt1))
+        return "not {}".format(stmt1)
 
 
 class CustomMatch(object):
