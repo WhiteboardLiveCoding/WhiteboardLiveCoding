@@ -46,6 +46,7 @@ class CodeFixer:
 
         self.statements.append(('(FUNCTION)\((PARAMETERS)\)', 2, None, self.fix_func_or_class_call))
         self.statements.append(('(VARIABLE)\.(FUNCTION)\((PARAMETERS)\)', 3, None, self.fix_method_call))
+        self.statements.append(('(self)\.(FUNCTION)\((PARAMETERS)\)', 7, None, self.fix_self_method_call))
         self.statements.append(('(VARIABLE)', 0, None, self.fix_variable))
         self.statements.append(('(STATEMENT) and (STATEMENT)', 5, None, self.fix_and))
         self.statements.append(('(STATEMENT) or (STATEMENT)', 4, None, self.fix_or))
@@ -138,11 +139,13 @@ class CodeFixer:
             (match, _, fix_func) = closest_match
 
             # At each line, check if currently in a class declaration.
-            if self.indents[i] < self.class_indent and self.curr_class:
+            if self.indents[idx] < self.class_indent and self.curr_class:
                 self.curr_class = None
 
-            if self.indents[i] < self.def_indent and self.curr_def:
+            if self.indents[idx] < self.def_indent and self.curr_def:
                 self.curr_def = None
+
+            self.curr_line_n = idx
 
             fixed = fix_func(match, self.poss_lines[idx])
             fixed_lines.append(self.naive_fix(fixed))
@@ -349,17 +352,27 @@ class CodeFixer:
 
     def analyze_for_range(self, groups, line_n):
         LOGGER.debug("Analysing range. Adding {} to context.".format(groups[1]))
-        self.context['variables'].append(groups[1])
+        if self.curr_def:
+            self.def_context[self.curr_def]['variables'].append(groups[1])
+        elif self.curr_class:
+            self.class_context[self.curr_class]['variables'].append(groups[1])
+        else:
+            self.context['variables'].append(groups[1])
 
     def analyze_for(self, groups, line_n):
         LOGGER.debug("Analysing for. Adding {} to context.".format(groups[1]))
-        self.context['variables'].append(groups[1])
+        if self.curr_def:
+            self.def_context[self.curr_def]['variables'].append(groups[1])
+        elif self.curr_class:
+            self.class_context[self.curr_class]['variables'].append(groups[1])
+        else:
+            self.context['variables'].append(groups[1])
 
     def analyze_assignment(self, groups, line_n):
         LOGGER.debug("Analysing assignment. Adding {} to context.".format(groups[1]))
-        if self.indents[line_n] <= self.def_indent and self.curr_def:
+        if self.curr_def:
             self.def_context[self.curr_def]['variables'].append(groups[1])
-        elif self.indents[line_n] <= self.class_indent and self.curr_class:
+        elif self.curr_class:
             self.class_context[self.curr_class]['variables'].append(groups[1])
         else:
             self.context['variables'].append(groups[1])
@@ -370,11 +383,14 @@ class CodeFixer:
         self.def_indent = self.indents[line_n]
         self.curr_def = groups[1]
 
-        if self.indents[line_n] <= self.class_indent and self.curr_class:
+        if self.curr_def:
+            self.def_context[self.curr_def]['functions'].append(groups[1])  # inline func -> only available in scope.
+        elif self.curr_class:
             self.context['methods'].append(groups[1])
             self.class_context[self.curr_class]['methods'].append(groups[1])
         else:
             self.context['functions'].append(groups[1])
+
         variables = groups[2].split(',')
         LOGGER.debug("Analysing function def variables. Adding {} to def context.".format(variables))
 
@@ -391,6 +407,7 @@ class CodeFixer:
         closest, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
         LOGGER.debug("Fixing import. Changing from {} to {}, and adding to context after analysis.".format(groups[1],
                                                                                                            closest))
+
         self.context["imports"].append(closest)
         return 'import {}'.format(closest)
 
@@ -400,6 +417,7 @@ class CodeFixer:
         closest_module, _ = self.levenshtein_closest(poss_import, stdlib_list("3.6"))
         LOGGER.debug("Fixing import as. Changing from {} to {}, and adding {} "
                      "to context after analysis.".format(groups[1], closest_module, groups[2]))
+
         self.context["imports"].extend(groups[2])
         return 'import {} as {}'.format(closest_module, groups[2])
 
@@ -410,6 +428,7 @@ class CodeFixer:
         imported = [i.strip() for i in groups[2].split(",")]
         LOGGER.debug("Fixing from X import Y. Changing from {} to {}, and adding {}"
                      " to context after analysis.".format(groups[1], closest_module, imported))
+
         self.context["imports"].extend(imported)
         return 'from {} import {}'.format(closest_module, ", ".join(imported))
 
@@ -505,14 +524,21 @@ class CodeFixer:
         poss_callable = poss_chars[match.start(2): match.end(2)]
         poss_method = poss_chars[match.start(3): match.end(3)]
 
-        closest_var, distance_var = self.levenshtein_closest(poss_callable, self.context["variables"])
+        if self.curr_def:
+            ctxt = self.def_context[self.curr_def]['variables'] + self.context['variables']
+        elif self.curr_class:
+            ctxt = self.class_context[self.curr_class]['variables'] + self.context['variables']
+        else:
+            ctxt = self.context['variables']
+
+        closest_var, distance_var = self.levenshtein_closest(poss_callable, ctxt)
         closest_import, distance_import = self.levenshtein_closest(poss_callable, self.context["imports"])
 
         # Check if its more likely to be a call on a custom variable, or an import.
         if distance_var <= distance_import:
             # is a var -> harder to check method -> TODO?
             closest_callable = closest_var
-            LOGGER.debug("Fixing method call var. From {} to {}".format(groups[1], closest_var))
+            LOGGER.debug("Fixing method call var. From {} to {}".format(groups[1], closest_callable))
 
             closest_method, _ = self.levenshtein_closest(poss_method, self.context["methods"])
             LOGGER.debug("Fixing method call method. From {} to {}".format(groups[2], closest_method))
@@ -539,10 +565,20 @@ class CodeFixer:
         return '{}.{}({})'.format(closest_callable, closest_method, closest_args)
 
     def fix_self_method_call(self, match, poss_chars):
+        # NOTE: 'self' is group 1, so as to be able to pass it to standard method fixing
         groups = match.groups()
-        poss_method = poss_chars[match.start(2): match.end(2)]
+        # Not in class -> shouldn't be self, revert to fixing
+        if not self.curr_class:
+            return self.fix_method_call(match, poss_chars)
+
+        poss_method = poss_chars[match.start(3): match.end(3)]
         closest_method, _ = self.levenshtein_closest(poss_method, self.class_context[self.curr_class]["methods"])
         LOGGER.debug("Fixing method call method. From {} to {}".format(groups[2], closest_method))
+
+        closest_args = self.fix_arguments(groups[3], poss_chars[match.start(4): match.end(4)])
+        LOGGER.debug("Fixing method call args. From {} to {}.".format(groups[3], closest_args))
+
+        return 'self.{}({})'.format(closest_method, closest_args)
 
     def fix_assignment(self, match, poss_chars):
         groups = match.groups()
@@ -602,7 +638,13 @@ class CodeFixer:
 
     # TODO: ensure we don't fix non-vars
     def fix_variable(self, match, poss_chars):
-        closest, _ = self.levenshtein_closest(poss_chars, self.context["variables"])
+        if self.curr_def:
+            ctxt = self.def_context[self.curr_def]['variables'] + self.context['variables']
+        elif self.curr_class:
+            ctxt = self.class_context[self.curr_class]['variables'] + self.context['variables']
+        else:
+            ctxt = self.context['variables']
+        closest, _ = self.levenshtein_closest(poss_chars, ctxt)
         LOGGER.debug("Fixing variable {} to {}.".format(match.groups()[0], closest))
         return closest
 
@@ -712,3 +754,6 @@ class CustomMatch(object):
         self._args.append(arg)
         self._start.append(start)
         self._end.append(end)
+
+    def __repr__(self):
+        return str(self._args)
