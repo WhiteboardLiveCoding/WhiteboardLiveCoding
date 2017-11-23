@@ -2,6 +2,7 @@ import json
 from urllib.request import urlopen
 
 import numpy as np
+import sys
 from cv2 import cv2, IMREAD_COLOR
 
 from flask import Flask, render_template
@@ -63,10 +64,34 @@ def api_resubmit_code():
 
 
 def _get_ar_coordinates(pic, error):
+
+    # calculate mins, maxs
+    min_x = min_y = sys.maxsize
+    max_x = max_y = 0
+
+    i = 1
+    line = pic.get_line_coordinates(i)
+    while line:
+        if line['x'] < min_x:
+            min_x = line['x']
+
+        if line['y'] < min_y:
+            min_y = line['y']
+
+        if (line['x'] + line['width']) > max_x:
+            max_x = line['x'] + line['width']
+
+        if (line['y'] + line['height']) > max_y:
+            max_y = line['y'] + line['height']
+
+        line = pic.get_line_coordinates(i)
+        i = i + 1
+
     return {
         'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
         'line': pic.get_line_coordinates(error.get_line()),
-        'character': pic.get_character_coordinates(error.get_line(), error.get_column())
+        'character': pic.get_character_coordinates(error.get_line(), error.get_column()),
+        'bbox': {'min_x': min_x, 'min_y': min_y, 'max_x': max_x, 'max_y': max_y}
     }
 
 
