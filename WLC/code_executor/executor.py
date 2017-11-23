@@ -3,7 +3,10 @@ import re
 import traceback
 
 import docker
+import os
+from hackerrank.HackerRankAPI import HackerRankAPI
 
+from WLC.utils.azure import get_tests_from_azure
 from ..ocr.picture_ocr import PictureOCR
 from ..code_executor.executor_error import ExecutorError
 from ..code_executor.redirected_std import redirected_std
@@ -51,6 +54,29 @@ class CodeExecutor:
             result, error = self.execute_sandbox(code)
 
         return result, error
+
+    def execute_hacker_rank(self, code, test_key):
+        template_code, test_cases, expected_responses = get_tests_from_azure(test_key)
+        return self._execute_hacker_rank(template_code.format(code), test_cases, expected_responses)
+
+    def _execute_hacker_rank(self, code, test_cases, expected_responses):
+        if 'HACKER_RANK_KEY' not in os.environ:
+            raise ValueError('HACKER_RANK_KEY not provided')
+
+        compiler = HackerRankAPI(api_key=os.environ['HACKER_RANK_KEY'])
+
+        result = compiler.run({
+            'source': code,
+            'lang': 'python3',
+            'testcases': test_cases
+        })
+
+        results = []
+
+        for i in range(len(test_cases)):
+            results.append({'passed': result.output[i] == expected_responses[i], 'output': result.output[i]})
+
+        return result
 
     def execute_local(self, code):
         LOGGER.info("Executing locally (UNSAFE! use -ip parameter to run the code safely) . . .\n")

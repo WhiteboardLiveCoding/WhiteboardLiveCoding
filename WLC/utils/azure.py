@@ -26,6 +26,15 @@ def create_container_not_exists(block_blob_service, container):
         block_blob_service.create_container(container)
 
 
+def create_containers_not_exist(block_blob_service, containers):
+    for container in containers:
+        create_container_not_exists(block_blob_service, container)
+
+
+def get_data_from_blobs(block_blob_service, containers, key):
+    return list(map(lambda container: block_blob_service.get_blob_to_text(container, key), containers))
+
+
 def save_image_to_azure(container, image):
     """
     Saves image to Azure Blob storage as a jpg. Requires BLOB_ACCOUNT and BLOB_KEY environment variables to be set.
@@ -54,6 +63,17 @@ def save_image_to_azure(container, image):
     )
 
     return True, hashed
+
+
+def get_tests_from_azure(test_key):
+    block_blob_service = get_block_blob_service()
+
+    containers = ['template_code', 'test_cases', 'expected_responses']
+
+    create_containers_not_exist(block_blob_service, containers)
+    data = get_data_from_blobs(block_blob_service, containers, test_key)
+
+    return data[0], data[1], data[2]
 
 
 def save_code_to_azure(container, image_container, key, code):
