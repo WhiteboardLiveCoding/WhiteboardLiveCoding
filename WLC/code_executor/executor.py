@@ -6,7 +6,7 @@ import docker
 import os
 from hackerrank.HackerRankAPI import HackerRankAPI
 
-from WLC.utils.azure import get_tests_from_azure
+from ..utils.azure import WLCAzure
 from ..ocr.picture_ocr import PictureOCR
 from ..code_executor.executor_error import ExecutorError
 from ..code_executor.redirected_std import redirected_std
@@ -56,7 +56,8 @@ class CodeExecutor:
         return result, error
 
     def execute_hacker_rank(self, code, test_key):
-        template_code, test_cases, expected_responses = get_tests_from_azure(test_key)
+        azure = WLCAzure()
+        template_code, test_cases, expected_responses = azure.get_tests_from_azure(test_key)
         return self._execute_hacker_rank(template_code.format(code), test_cases, expected_responses)
 
     def _execute_hacker_rank(self, code, test_cases, expected_responses):
