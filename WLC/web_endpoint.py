@@ -37,7 +37,7 @@ def api_upload_image():
         code, fixed_code, result, error = executor.execute_code_img(pic)
 
         if 'test_key' in request.json:
-            test_results = executor.execute_hacker_rank(code, request.json.get('test_key'))
+            test_results = executor.execute_tests(code, request.json.get('test_key'))
         else:
             test_results = []
 
@@ -59,7 +59,7 @@ def api_resubmit_code():
         result, error = executor.execute_code(code)
 
         if 'test_key' in request.json:
-            test_results = executor.execute_hacker_rank(code, request.json.get('test_key'))
+            test_results = executor.execute_tests(code, request.json.get('test_key'))
         else:
             test_results = []
 

@@ -55,7 +55,7 @@ class CodeExecutor:
 
         return result, error
 
-    def execute_hacker_rank(self, code, test_key):
+    def execute_tests(self, code, test_key):
         azure = WLCAzure()
         template_code, test_cases, expected_responses = azure.get_tests_from_azure(test_key)
         return self._execute_hacker_rank(template_code.format(code), test_cases, expected_responses)
