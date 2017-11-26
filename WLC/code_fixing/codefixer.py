@@ -41,13 +41,13 @@ class CodeFixer:
         self.syntax.append(('VARIABLE', '[a-z_]+'))
         self.syntax.append(('FUNCTION', '[a-z_]+'))
 
-        self.syntax.append(('STATEMENT', '.+?'))  # Note - should be '.+?' or '.+' ?
+        self.syntax.append(('STATEMENT', '.+'))
         self.syntax.append(('PARAMETERS', '.*'))
 
         self.statements.append(('(FUNCTION)\((PARAMETERS)\)', 2, None, self.fix_func_or_class_call))
+        self.statements.append(('lambda (PARAMETERS): (STATEMENT)', 9, None, self.fix_lambda))
         self.statements.append(('(VARIABLE)\.(FUNCTION)\((PARAMETERS)\)', 3, None, self.fix_method_call))
         self.statements.append(('(self)\.(FUNCTION)\((PARAMETERS)\)', 7, None, self.fix_self_method_call))
-        self.statements.append(('(VARIABLE)', 0, None, self.fix_variable))
         self.statements.append(('(STATEMENT) and (STATEMENT)', 5, None, self.fix_and))
         self.statements.append(('(STATEMENT) or (STATEMENT)', 4, None, self.fix_or))
         self.statements.append(('not (STATEMENT)', 4, None, self.fix_not))
@@ -60,7 +60,7 @@ class CodeFixer:
         self.statements.append(('true', 4, None, lambda x, y: "True"))
         self.statements.append(('false', 5, None, lambda x, y: "False"))
         self.statements.append(('none', 4, None, lambda x, y: "None"))
-
+        self.statements.append(('(VARIABLE)', 0, None, self.fix_variable))  # default case
         # check how the size can be changed to account for spaces.
         # self.statements.append(('\((STATEMENT)\)', 2, None, self.fix_bracketed))
         # self.statements.append(('(STATEMENT) == (STATEMENT)', 4, None, self.fix_eq))
@@ -518,6 +518,16 @@ class CodeFixer:
 
         LOGGER.debug("Fixing func/class call arguments from {} to {}".format(groups[2], new_args))
         return '{}({})'.format(closest, new_args)
+
+    def fix_lambda(self, match, poss_chars):
+        groups = match.groups()
+        # TODO: put args in lambda scope
+        args = groups[1]
+        stmt = self.fix_statement(CustomMatch(groups[2], match.start(3), match.end(3)),
+                                  poss_chars[match.start(3): match.end(3)])
+
+        LOGGER.debug("fixing '{}' to 'lambda {}: {}'".format(groups[0], args, stmt))
+        return "lambda {}: {}".format(args, stmt)
 
     def fix_method_call(self, match, poss_chars):
         groups = match.groups()
