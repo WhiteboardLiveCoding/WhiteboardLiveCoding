@@ -42,6 +42,8 @@ class Camera:
     def read_file(self, file_name, to_show):
         input_path = get_full_path(file_name)
         img = cv2.imread(input_path)
+        if img is None:
+            raise Exception("File does not exist!")
         height, width, _ = img.shape
         return Picture(img, 0, 0, width, height, to_show)
 
@@ -56,6 +58,6 @@ class Camera:
         to_show = Preferences(show_pic, show_line, show_word, show_character, annotate)
 
         if not image_path:
-            image_path = 'assets/examples/images/class.png'
+            image_path = 'assets/examples/images/fib_2.png'
 
         return self.read_file(image_path, to_show)
