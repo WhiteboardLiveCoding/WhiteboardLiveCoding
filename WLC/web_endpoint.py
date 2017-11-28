@@ -9,8 +9,8 @@ from flask import request
 from image_segmentation.picture import Picture
 from image_segmentation.preprocessor import Preprocessor
 
+from .code_executor.code_executor import CodeExecutor
 from .utils.azure import WLCAzure
-from .code_executor.executor import CodeExecutor
 
 app = Flask(__name__)
 
@@ -33,11 +33,11 @@ def api_upload_image():
         azure = WLCAzure()
         saved, key = azure.save_image_to_azure('pictures', pic.get_image())
 
-        executor = CodeExecutor()
+        executor = get_executor(request)
         code, fixed_code, result, errors = executor.execute_code_img(pic)
 
-        if request.json and 'test_key' in request.json:
-            test_results = executor.execute_tests(code, request.json.get('test_key'))
+        if 'test_key' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('test_key'))
         else:
             test_results = []
 
@@ -55,11 +55,11 @@ def api_upload_image():
 def api_resubmit_code():
     if request.method == 'POST':
         code = request.json.get('code')
-        executor = CodeExecutor()
+        executor = get_executor(request)
         result, errors = executor.execute_code(code)
 
-        if request.json and 'test_key' in request.json:
-            test_results = executor.execute_tests(code, request.json.get('test_key'))
+        if 'test_key' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('test_key'))
         else:
             test_results = []
 
@@ -100,6 +100,13 @@ def _url_to_image(url):
     resp = urlopen(url)
     image = np.asarray(bytearray(resp.read()), dtype="uint8")
     return cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+
+def get_executor(request):
+    if 'language' in request.args:
+        return CodeExecutor(request.args.get('language'))
+    else:
+        return CodeExecutor()
 
 
 if __name__ == "__main__":

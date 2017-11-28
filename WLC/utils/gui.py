@@ -1,7 +1,9 @@
 import tkinter as tk
 from os.path import dirname
 from tkinter import filedialog
-from ..code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
+
+from ..code_executor.code_executor import CodeExecutor
+from ..code_executor.abstract_executor import DEFAULT_DOCKER_PORT
 
 
 class Gui(tk.Frame):
@@ -20,7 +22,7 @@ class Gui(tk.Frame):
 
     # Execute code and display text field accordingly
     def execute_code(self, picture):
-        unfixed_code, fixed_code, result, error = CodeExecutor(self.docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        unfixed_code, fixed_code, result, error = CodeExecutor("python3", self.docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
         self.display_ocr(unfixed_code, fixed_code)
         self.display_output(result, error)
 

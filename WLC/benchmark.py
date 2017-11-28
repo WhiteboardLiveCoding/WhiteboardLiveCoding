@@ -4,7 +4,7 @@ import os
 
 from os.path import isfile, join
 
-from WLC.code_executor.executor import CodeExecutor
+from WLC.code_executor.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.utils.formatting import FORMAT
 from WLC.utils.path import get_full_path
