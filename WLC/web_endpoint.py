@@ -9,8 +9,8 @@ from flask import request
 from image_segmentation.picture import Picture
 from image_segmentation.preprocessor import Preprocessor
 
+from .utils.azure import WLCAzure
 from .code_executor.executor import CodeExecutor
-from .utils.azure import save_image_to_azure, save_code_to_azure
 
 app = Flask(__name__)
 
@@ -29,12 +29,22 @@ def api_upload_image():
 
         height, width, _ = img.shape
         pic = Picture(img, 0, 0, width, height, None)
-        saved, key = save_image_to_azure('pictures', pic.get_image())
 
-        code, fixed_code, result, error = CodeExecutor().execute_code_img(pic)
+        azure = WLCAzure()
+        saved, key = azure.save_image_to_azure('pictures', pic.get_image())
+
+        executor = CodeExecutor()
+        code, fixed_code, result, error = executor.execute_code_img(pic)
+
+        if 'test_key' in request.json:
+            test_results = executor.execute_tests(code, request.json.get('test_key'))
+        else:
+            test_results = []
+
         ar = _get_ar_coordinates(pic, error)
 
-        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key, 'ar': ar}
+        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key,
+                    'ar': ar, 'test_results': test_results}
 
         return json.dumps(response)
     else:
@@ -45,7 +55,13 @@ def api_upload_image():
 def api_resubmit_code():
     if request.method == 'POST':
         code = request.json.get('code')
-        result, error = CodeExecutor().execute_code(code)
+        executor = CodeExecutor()
+        result, error = executor.execute_code(code)
+
+        if 'test_key' in request.json:
+            test_results = executor.execute_tests(code, request.json.get('test_key'))
+        else:
+            test_results = []
 
         key = request.json.get('key')
         image = _url_to_image('https://alpstore.blob.core.windows.net/pictures/{}'.format(key))
@@ -55,9 +71,11 @@ def api_resubmit_code():
         pic.get_segments()
         ar = _get_ar_coordinates(pic, error)
 
-        save_code_to_azure('code', 'pictures', key, code)
+        azure = WLCAzure()
+        azure.save_code_to_azure('code', 'pictures', key, code)
 
-        return json.dumps({'result': str(result), 'error': str(error), 'ar': ar, 'key': key})
+        return json.dumps({'result': str(result), 'error': str(error), 'ar': ar, 'key': key,
+                           'test_results': test_results})
     else:
         return render_template('resubmit_test.html')
 
