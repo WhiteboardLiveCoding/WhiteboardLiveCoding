@@ -46,11 +46,9 @@ class AbstractCodeExecutor:
         LOGGER.info("Executing code: \n%s\n", code)
 
         if self.force_local:
-            result = self.execute_local(code)
+            result, errors = self.execute_local(code)
         else:
-            result = self.execute_sandbox(code)
-
-        errors = self.get_code_errors(code)
+            result, errors = self.execute_sandbox(code)
 
         return result, errors
 
@@ -82,7 +80,4 @@ class AbstractCodeExecutor:
         raise NotImplemented()
 
     def execute_sandbox(self, code):
-        raise NotImplemented()
-
-    def get_code_errors(self, code):
         raise NotImplemented()

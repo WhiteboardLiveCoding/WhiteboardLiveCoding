@@ -32,7 +32,7 @@ class PythonExecutor(AbstractCodeExecutor):
             stdout_prog = self.NO_OUTPUT
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog
+        return stdout_prog, self._get_code_errors(code)
 
     def execute_sandbox(self, code):
         LOGGER.info("Executing in sandbox . . .\n")
@@ -47,7 +47,7 @@ class PythonExecutor(AbstractCodeExecutor):
         LOGGER.info("Output:\n%s\n", stdout_prog)
         return stdout_prog, ExecutorError()
 
-    def get_code_errors(self, code):
+    def _get_code_errors(self, code):
         file_code = tempfile.NamedTemporaryFile(delete=False, suffix='.py')
         file_code.write(code.encode('utf8'))
         file_code.close()
