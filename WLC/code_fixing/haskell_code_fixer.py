@@ -1,5 +1,7 @@
 import logging
 
+import collections
+
 from WLC.code_fixing.code_fixer import CodeFixer
 
 LOGGER = logging.getLogger()
@@ -14,6 +16,11 @@ class HaskellCodeFixer(CodeFixer):
         self.syntax = []
         self.rules = []
         self.statements = []
+
+        self.context = {'variables': [], 'functions': []}
+
+        self.func_context = collections.defaultdict(lambda: collections.defaultdict(list))
+        self.curr_func = None
 
         self.syntax.append(('VARIABLE', '[a-z_]+'))
         self.syntax.append(('FUNCTION', '[a-z_]+'))
@@ -31,7 +38,8 @@ class HaskellCodeFixer(CodeFixer):
 
         self.rules.append(("(VARIABLE) = (VAL)", 3, None, self.fix_assignment))
         self.rules.append(("let (VARIABLE) = (VAL)", 7, None, self.fix_global_assignment))
-        self.rules.append(("(FUNCTION) (ARGS) = (PARAMETERS)", 4, None, self.fix_func_decl))
+        self.rules.append(("(FUNCTION) (ARGS) = (PARAMETERS)", 4, self.analyse_func, self.fix_func_decl))
+        self.rules.append(("(FUNCTION) (ARGS)", 1, self.analyse_func, self.fix_func_decl_newline))
         self.rules.append(('(.*)', 0, None, self.fix_default))  # If nothing else works this will
 
         LOGGER.debug('Compiling main haskell rules.')
@@ -72,6 +80,24 @@ class HaskellCodeFixer(CodeFixer):
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
+    def analyse_global_assignment(self, match, line_n):
+        groups = match.groups()
+        var_name = groups[1]
+        self.context['functions'].append(var_name)
+        LOGGER.debug("{} var added to global scope".format(var_name))
+
+
+    def analyse_func(self, match, line_n):
+        groups = match.groups()
+        func_name = groups[1]  # add to global scope
+        self.curr_func = func_name
+        self.context['functions'].append(func_name)
+        LOGGER.debug("{} function added to global scope".format(func_name))
+
+        func_args = groups[2].split()  # add to function scope
+        self.func_context[self.curr_func2]['variables'].extend(func_args)
+        LOGGER.debug("{} added to local function scope".format(func_args))
+
     def fix_and(self, match, poss_chars):
         groups = match.groups()
         var1 = groups[1]
@@ -108,14 +134,27 @@ class HaskellCodeFixer(CodeFixer):
 
     def fix_func_decl(self, match, poss_chars):
         groups = match.groups()
-        funcname = groups[1]  # add to global scope
-        func_args = groups[2].split()  # add to function scope
-        func_exec = groups[3]  # fix
+        funcname = groups[1]
+        self.curr_func = funcname
+
+        func_args = groups[2].split()
+        func_exec = groups[3]
 
         LOGGER.debug("Function declared for {}".format(funcname))
         LOGGER.debug("With args {}".format(func_args))
         LOGGER.debug("With exec {}".format(func_exec))
         return "{} {} = {}".format(funcname, " ".join(func_args), func_exec)
+
+    def fix_func_decl_newline(self, match, poss_chars):
+        groups = match.groups()
+        funcname = groups[1]
+        self.curr_func = funcname
+
+        func_args = groups[2].split()
+
+        LOGGER.debug("Newline function declared for {}".format(funcname))
+        LOGGER.debug("With args {}".format(func_args))
+        return "{} {}".format(funcname, " ".join(func_args))
 
     def fix_default(self, match, poss_chars):
         groups = match.groups()
