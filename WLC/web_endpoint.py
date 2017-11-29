@@ -89,17 +89,10 @@ def _get_ar_coordinates(pic, errors):
     i = 1
     line = pic.get_line_coordinates(i)
     while line:
-        if line['x'] < min_x:
-            min_x = line['x']
-
-        if line['y'] < min_y:
-            min_y = line['y']
-
-        if (line['x'] + line['width']) > max_x:
-            max_x = line['x'] + line['width']
-
-        if (line['y'] + line['height']) > max_y:
-            max_y = line['y'] + line['height']
+        min_x = min(min_x, line['x']);
+        min_y = min(min_y, line['y']);
+        max_x = max(max_x, line['x'] + line['width']);
+        max_y = max(max_y, line['y'] + line['height']);
 
         line = pic.get_line_coordinates(i)
         i = i + 1  
