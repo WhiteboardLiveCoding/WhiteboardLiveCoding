@@ -29,9 +29,9 @@ class HaskellCodeFixer(CodeFixer):
         self.statements.append(('true', 4, None, lambda x, y: "True"))
         self.statements.append(('false', 5, None, lambda x, y: "False"))
 
-        self.rules.append(("(VARIABLE) = (VAL)", 5, None, self.fix_assignment))
-        self.rules.append(("let (VARIABLE) = (VAL)", 9, None, self.fix_assignment))
-        self.rules.append(("(FUNCTION) (ARGS) = (PARAMETERS)", 5, None, self.fix_func_decl))
+        self.rules.append(("(VARIABLE) = (VAL)", 3, None, self.fix_assignment))
+        self.rules.append(("let (VARIABLE) = (VAL)", 7, None, self.fix_global_assignment))
+        self.rules.append(("(FUNCTION) (ARGS) = (PARAMETERS)", 4, None, self.fix_func_decl))
         self.rules.append(('(.*)', 0, None, self.fix_default))  # If nothing else works this will
 
         LOGGER.debug('Compiling main haskell rules.')
@@ -73,19 +73,52 @@ class HaskellCodeFixer(CodeFixer):
                          zip(self.indents, fixed_lines))
 
     def fix_and(self, match, poss_chars):
-        pass
+        groups = match.groups()
+        var1 = groups[1]
+        var2 = groups[2]
+        LOGGER.debug("Fixing &&")
+        return "{} && {}".format(var1, var2)
 
     def fix_or(self, match, poss_chars):
-        pass
+        groups = match.groups()
+        var1 = groups[1]
+        var2 = groups[2]
+        LOGGER.debug("Fixing ||")
+        return "{} || {}".format(var1, var2)
 
     def fix_not(self, match, poss_chars):
-        pass
+        groups = match.groups()
+        var1 = groups[1]
+        LOGGER.debug("Fixing not")
+        return "not {}".format(var1)
 
     def fix_assignment(self, match, poss_chars):
-        pass
+        groups = match.groups()
+        var1 = groups[1]
+        var2 = groups[2]
+        LOGGER.debug("Fixing assignment")
+        return "{} = {}".format(var1, var2)
 
-    def fix_func(self, match, poss_chars):
-        pass
+    def fix_global_assignment(self, match, poss_chars):
+        groups = match.groups()
+        var1 = groups[1]
+        var2 = groups[2]
+        LOGGER.debug("Fixing let assignment")
+        return "let {} = {}".format(var1, var2)
+
+    def fix_func_decl(self, match, poss_chars):
+        groups = match.groups()
+        funcname = groups[1]  # add to global scope
+        func_args = groups[2].split()  # add to function scope
+        func_exec = groups[3]  # fix
+
+        LOGGER.debug("Function declared for {}".format(funcname))
+        LOGGER.debug("With args {}".format(func_args))
+        LOGGER.debug("With exec {}".format(func_exec))
+        return "{} {} = {}".format(funcname, " ".join(func_args), func_exec)
 
     def fix_default(self, match, poss_chars):
-        pass
+        groups = match.groups()
+        all = groups[0]
+        LOGGER.debug("Could not fix '{}'".format(all))
+        return all
