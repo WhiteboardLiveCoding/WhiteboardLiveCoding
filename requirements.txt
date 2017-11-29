@@ -17,3 +17,5 @@ Flask
 git+git://github.com/WhiteboardLiveCoding/ImageSegmentation.git
 hackerrank-sdk
 pylint
+astroid
+isort
