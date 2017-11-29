@@ -24,10 +24,10 @@ def _get_expected_code(file_name):
         return file.read().lower()
 
 
-def benchmark_file(file_name):
+def benchmark_file(file_name, language="python3"):
     expected_code = _get_expected_code(file_name)
     picture = Camera().read_file(file_name, None)
-    code, fixed_code = CodeExecutor().process_picture(picture)
+    code, fixed_code = CodeExecutor(language).process_picture(picture)
 
     if 'sign' in file_name:
         fixed_code = code
@@ -47,17 +47,30 @@ def benchmark_file(file_name):
 def run_benchmarks():
     LOGGER.info('=== Whiteboard Live Coding Benchmarking ===')
     LOGGER.info('Uses Levenshtein distance to calculate the difference and then uses that to calculate accuracy.')
-    LOGGER.info('')
 
     total_accuracy = 0
     total_accuracy_fixed = 0
     total_length = 0
 
-    directory = get_full_path('assets/examples/images/')
+    LOGGER.info('')
+    LOGGER.info('Testing Python3 code:')
+    python_directory = get_full_path('assets/examples/images/python3/')
 
-    for file in [f for f in os.listdir(directory) if isfile(join(directory, f))]:
-        file_path = join(directory, file)
-        accuracy, accuracy_fixed, length = benchmark_file(file_path)
+    for file in (f for f in os.listdir(python_directory) if isfile(join(python_directory, f)) and not f.startswith(".")):
+        file_path = join(python_directory, file)
+        accuracy, accuracy_fixed, length = benchmark_file(file_path, "python3")
+
+        total_accuracy += accuracy * length
+        total_accuracy_fixed += accuracy_fixed * length
+        total_length += length
+
+    LOGGER.info('')
+    LOGGER.info('Testing Haskell code:')
+    haskell_directory = get_full_path('assets/examples/images/haskell/')
+    for file in (f for f in os.listdir(haskell_directory) if isfile(join(haskell_directory, f)) and not f.startswith(".")):
+        file_path = join(haskell_directory, file)
+        accuracy, accuracy_fixed, length = benchmark_file(file_path, "haskell")
+
         total_accuracy += accuracy * length
         total_accuracy_fixed += accuracy_fixed * length
         total_length += length
