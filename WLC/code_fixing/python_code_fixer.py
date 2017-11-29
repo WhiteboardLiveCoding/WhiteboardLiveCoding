@@ -102,7 +102,7 @@ class PythonCodeFixer(CodeFixer):
 
         :return: Fixed version of the code
         """
-        LOGGER.debug('Starting code fixing.')
+        LOGGER.debug('Starting python3 code fixing.')
 
         fixed_lines = []
         closest_matches = []

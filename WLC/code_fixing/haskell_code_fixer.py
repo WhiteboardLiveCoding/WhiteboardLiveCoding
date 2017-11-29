@@ -34,9 +34,45 @@ class HaskellCodeFixer(CodeFixer):
         self.rules.append(("max (VAL) (VAL)", 5, None, self.fix_max))
         self.rules.append(("(VARIABLE) = (VAL)", 5, None, self.fix_assignment))
         self.rules.append(("(FUNCTION) (ARGS) = (PARAMETERS)", 5, None, self.fix_func))
+        self.rules.append(('(.*)', 0, None, self.fix_default))  # If nothing else works this will
+
+        LOGGER.debug('Compiling main haskell rules.')
+        self.rules_regexes = self.compile_regex(self.rules)
+
+        LOGGER.debug('Compiling haskell statement rules.')
+        self.statements_regexes = self.compile_regex(self.statements)
 
     def fix(self):
-        return self.code
+        """
+        Main function to be called which finds the closest regex match for each line, extracts context variables and
+        function names and then attempts to fix typos.
+
+        :return: Fixed version of the code
+        """
+        LOGGER.debug('Starting haskell code fixing.')
+
+        fixed_lines = []
+        closest_matches = []
+
+        LOGGER.debug('Looking for closest matches.')
+        for i in range(len(self.poss_lines)):  # range loop OK because of indexing type
+            closest_match = self.find_closest_match(self.poss_lines[i], self.rules_regexes)
+            (match, analyze_func, _) = closest_match
+
+            if analyze_func:
+                analyze_func(match.groups(), i)
+
+            closest_matches.append(closest_match)
+
+        LOGGER.debug('Fixing lines.')
+        for idx, closest_match in enumerate(closest_matches):
+            (match, _, fix_func) = closest_match
+
+            fixed = fix_func(match, self.poss_lines[idx])
+            fixed_lines.append(fixed)
+
+        return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
+                         zip(self.indents, fixed_lines))
 
     def fix_and(self, match, poss_chars):
         pass
@@ -60,4 +96,7 @@ class HaskellCodeFixer(CodeFixer):
         pass
 
     def fix_func(self, match, poss_chars):
+        pass
+
+    def fix_default(self, match, poss_chars):
         pass
