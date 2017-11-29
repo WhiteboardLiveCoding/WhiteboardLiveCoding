@@ -59,3 +59,5 @@ class PythonExecutor(AbstractCodeExecutor):
 
         if pylint_stdout.getvalue():
             return json.loads(pylint_stdout.getvalue())
+        else:
+            return []

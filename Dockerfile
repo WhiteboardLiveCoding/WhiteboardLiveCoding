@@ -12,3 +12,18 @@ COPY ./uwsgi.ini /app/uwsgi.ini
 COPY ./requirements.txt /app/requirements.txt
 WORKDIR /app
 RUN pip install --upgrade -r requirements.txt
+
+# GHC
+RUN mkdir -p /usr/src/ghc
+WORKDIR /usr/src/ghc
+
+RUN curl --silent -O https://downloads.haskell.org/~ghc/7.10.1/ghc-7.10.1-x86_64-unknown-linux-deb7.tar.bz2 \
+  && echo '3f513c023dc644220ceaba15e5a5089516968b6553b5227e402f079178acba0a  ghc-7.10.1-x86_64-unknown-linux-deb7.tar.bz2' | sha256sum -c - \
+  && tar --strip-components=1 -xjf ghc-7.10.1-x86_64-unknown-linux-deb7.tar.bz2 \
+  && rm ghc-7.10.1-x86_64-unknown-linux-deb7.tar.bz2 \
+  && ./configure \
+  && make install \
+  && rm -rf /usr/src/ghc \
+  && /usr/local/bin/ghc --version
+
+WORKDIR /app
