@@ -4,7 +4,7 @@ import os
 
 from os.path import isfile, join
 
-from WLC.code_executor.executor import CodeExecutor
+from WLC.code_executor.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.utils.formatting import FORMAT
 from WLC.utils.path import get_full_path
@@ -33,7 +33,7 @@ def benchmark_file(file_name):
         fixed_code = code
 
     difference = editdistance.eval("".join(code.split()), "".join(expected_code.split()))
-    difference_fixed = editdistance.eval("".join(fixed_code.split()), "".join(expected_code.split()))
+    difference_fixed = editdistance.eval("".join(fixed_code.lower().split()), "".join(expected_code.split()))
 
     length = len("".join(expected_code.split()))
     accuracy = round(100 - (difference * 100 / length))

@@ -2,7 +2,8 @@ import argparse
 import logging
 import tkinter as tk
 
-from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
+from WLC.code_executor.abstract_executor import DEFAULT_DOCKER_PORT
+from WLC.code_executor.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.utils.formatting import FORMAT
 from WLC.utils.gui import Gui
@@ -22,6 +23,7 @@ def arguments():
     parser.add_argument("-d", "--debug", action="store_true", default=False, help="Run in debug mode")
     parser.add_argument("-ip", "--dockerip", help="Docker daemon IP")
     parser.add_argument("-a", "--annotate", action="store_true", default=False, help="Ask user to annotate images")
+    parser.add_argument("-lg", "--language", default='python3', help="Which language to execute code in.")
 
     args, unknown = parser.parse_known_args()
     show_gui = args.gui
@@ -32,6 +34,7 @@ def arguments():
     debug_mode = args.debug
     docker_ip = args.dockerip
     annotate = args.annotate
+    language = args.language
 
     if debug_mode:
         LOGGER.setLevel(logging.DEBUG)
@@ -45,13 +48,16 @@ def arguments():
     - debug_mode: %s
     - docker_ip: %s
     - annotate: %s
-    """, show_gui, show_pic, show_line, show_word, show_character, debug_mode, docker_ip, annotate)
+    - language: %s
+    """, show_gui, show_pic, show_line, show_word, show_character, debug_mode, docker_ip, annotate, language)
 
-    return show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate
+    return show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate, language
 
 
-def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_character=False, docker_ip="",
-         annotate=False):
+def main():
+
+    show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate, language = arguments()
+
     picture_path = None
 
     if show_gui:
@@ -74,13 +80,20 @@ def main(show_gui=False, show_pic=False, show_line=False, show_word=False, show_
         app.mainloop()
 
     else:
-        CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        if language.lower() == 'haskell':
+            LOGGER.info("Executing haskell code.")
+            CodeExecutor("haskell", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        elif language.lower() == "python3":
+            LOGGER.info("Executing python3 code.")
+            CodeExecutor("python3", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        else:
+            LOGGER.info("Executing python3 code. (default - use the -l <language> flag)")
+            CodeExecutor("python3", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
 
 
 if __name__ == '__main__':
     LOGGER.setLevel(logging.INFO)
     LOGGER.info("Welcome to Live Whiteboard Coding!")
 
-    show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate = arguments()
-    main(show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate)
+    main()
 

@@ -10,8 +10,8 @@ from flask import request
 from image_segmentation.picture import Picture
 from image_segmentation.preprocessor import Preprocessor
 
-from .code_executor.executor import CodeExecutor
-from .utils.azure import save_image_to_azure, save_code_to_azure
+from .code_executor.code_executor import CodeExecutor
+from .utils.azure import WLCAzure
 
 app = Flask(__name__)
 
@@ -30,12 +30,22 @@ def api_upload_image():
 
         height, width, _ = img.shape
         pic = Picture(img, 0, 0, width, height, None)
-        saved, key = save_image_to_azure('pictures', pic.get_image())
 
-        code, fixed_code, result, error = CodeExecutor().execute_code_img(pic)
-        ar = _get_ar_coordinates(pic, error)
+        azure = WLCAzure()
+        saved, key = azure.save_image_to_azure('pictures', pic.get_image())
 
-        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key, 'ar': ar}
+        executor = get_executor(request)
+        code, fixed_code, result, errors = executor.execute_code_img(pic)
+
+        if 'test_key' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('test_key'))
+        else:
+            test_results = []
+
+        ar = _get_ar_coordinates(pic, errors)
+
+        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'errors': errors, 'key': key,
+                    'ar': ar, 'test_results': test_results}
 
         return json.dumps(response)
     else:
@@ -46,7 +56,13 @@ def api_upload_image():
 def api_resubmit_code():
     if request.method == 'POST':
         code = request.json.get('code')
-        result, error = CodeExecutor().execute_code(code)
+        executor = get_executor(request)
+        result, errors = executor.execute_code(code)
+
+        if 'test_key' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('test_key'))
+        else:
+            test_results = []
 
         key = request.json.get('key')
         image = _url_to_image('https://alpstore.blob.core.windows.net/pictures/{}'.format(key))
@@ -54,17 +70,18 @@ def api_resubmit_code():
         pic = Picture(image, 0, 0, width, height)
         pic = Preprocessor().process(pic)
         pic.get_segments()
-        ar = _get_ar_coordinates(pic, error)
+        ar = _get_ar_coordinates(pic, errors)
 
-        save_code_to_azure('code', 'pictures', key, code)
+        azure = WLCAzure()
+        azure.save_code_to_azure('code', 'pictures', key, code)
 
-        return json.dumps({'result': str(result), 'error': str(error), 'ar': ar, 'key': key})
+        return json.dumps({'result': str(result), 'errors': errors, 'ar': ar, 'key': key,
+                           'test_results': test_results})
     else:
         return render_template('resubmit_test.html')
 
 
-def _get_ar_coordinates(pic, error):
-
+def _get_ar_coordinates(pic, errors):
     # calculate mins, maxs
     min_x = min_y = sys.maxsize
     max_x = max_y = 0
@@ -85,20 +102,35 @@ def _get_ar_coordinates(pic, error):
             max_y = line['y'] + line['height']
 
         line = pic.get_line_coordinates(i)
-        i = i + 1
-
-    return {
+        i = i + 1  
+      
+    ar_coords = {
         'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
-        'line': pic.get_line_coordinates(error.get_line()),
-        'character': pic.get_character_coordinates(error.get_line(), error.get_column()),
-        'bbox': {'min_x': min_x, 'min_y': min_y, 'max_x': max_x, 'max_y': max_y}
+        'bbox': {'min_x': min_x, 'min_y': min_y, 'max_x': max_x, 'max_y': max_y},
+        'errors': [],
     }
+
+    for error in errors:
+        ar_coords['errors'].append(
+            {
+                'line': pic.get_line_coordinates(error['line']),
+                'character': pic.get_character_coordinates(error['line'], error['column']-1)
+            })
+
+    return ar_coords
 
 
 def _url_to_image(url):
     resp = urlopen(url)
     image = np.asarray(bytearray(resp.read()), dtype="uint8")
     return cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+
+def get_executor(request):
+    if 'language' in request.args:
+        return CodeExecutor(request.args.get('language'))
+    else:
+        return CodeExecutor()
 
 
 if __name__ == "__main__":
