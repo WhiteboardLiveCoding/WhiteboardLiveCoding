@@ -23,6 +23,7 @@ def arguments():
     parser.add_argument("-d", "--debug", action="store_true", default=False, help="Run in debug mode")
     parser.add_argument("-ip", "--dockerip", help="Docker daemon IP")
     parser.add_argument("-a", "--annotate", action="store_true", default=False, help="Ask user to annotate images")
+    parser.add_argument("-lg", "--language", default='python3', help="Which language to execute code in.")
 
     args, unknown = parser.parse_known_args()
     show_gui = args.gui
@@ -33,6 +34,7 @@ def arguments():
     debug_mode = args.debug
     docker_ip = args.dockerip
     annotate = args.annotate
+    language = args.language
 
     if debug_mode:
         LOGGER.setLevel(logging.DEBUG)
@@ -46,14 +48,15 @@ def arguments():
     - debug_mode: %s
     - docker_ip: %s
     - annotate: %s
-    """, show_gui, show_pic, show_line, show_word, show_character, debug_mode, docker_ip, annotate)
+    - language: %s
+    """, show_gui, show_pic, show_line, show_word, show_character, debug_mode, docker_ip, annotate, language)
 
-    return show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate
+    return show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate, language
 
 
 def main():
 
-    show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate = arguments()
+    show_gui, show_pic, show_line, show_word, show_character, docker_ip, annotate, language = arguments()
 
     picture_path = None
 
@@ -77,7 +80,15 @@ def main():
         app.mainloop()
 
     else:
-        CodeExecutor("python3", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        if language.lower() == 'haskell':
+            LOGGER.info("Executing haskell code.")
+            CodeExecutor("haskell", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        elif language.lower() == "python3":
+            LOGGER.info("Executing python3 code.")
+            CodeExecutor("python3", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        else:
+            LOGGER.info("Executing python3 code. (default - use the -l <language> flag)")
+            CodeExecutor("python3", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
 
 
 if __name__ == '__main__':
