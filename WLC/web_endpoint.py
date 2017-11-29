@@ -95,9 +95,7 @@ def api_template():
         azure = WLCAzure()
         key, err = azure.save_template_and_test('template', template_file, test_file)
 
-        if err == 1:
-            return json.dumps({'id': '', 'error': 'Template already exists', 'success': False})
-        elif err == 2:
+        if err != 0:
             return json.dumps({'id': '', 'error': 'File Upload Failed', 'success': False})
 
         return json.dumps({'id': str(key), 'error': '', 'success': True})

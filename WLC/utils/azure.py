@@ -64,21 +64,21 @@ class WLCAzure:
         return True, hashed
 
     def save_template_and_test(self, container, template_file, test_file):
-        self.create_container_not_exist(container)
+        self.create_container_not_exists(container)
 
-        hashed = hashlib.md5(template_file.tobytes()).hexdigest()
+        template = template_file.read()
+        test = test_file.read()
 
-        if self._block_blob_service.exists(container, hashed):
-            return '', 1
+        hashed = hashlib.md5(template).hexdigest()
 
         template_filename = '{}.py'.format(hashed)
         test_filename = '{}.json'.format(hashed)
 
         try:
-            self._block_blob_service.create_blob_from_text(container, template_filename, template_file)
-            self._block_blob_service.create_blob_from_text(container, test_filename, test_file)
+            self._block_blob_service.create_blob_from_text(container, template_filename, template)
+            self._block_blob_service.create_blob_from_text(container, test_filename, test)
         except Exception:
-            return '', 2
+            return '', -1
 
         return hashed, 0
 
