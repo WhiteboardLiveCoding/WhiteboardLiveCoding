@@ -29,11 +29,9 @@ class HaskellCodeFixer(CodeFixer):
         self.statements.append(('true', 4, None, lambda x, y: "True"))
         self.statements.append(('false', 5, None, lambda x, y: "False"))
 
-        self.rules.append(("succ (VAL)", 5, None, self.fix_succ))
-        self.rules.append(("min (VAL) (VAL)", 5, None, self.fix_min))
-        self.rules.append(("max (VAL) (VAL)", 5, None, self.fix_max))
         self.rules.append(("(VARIABLE) = (VAL)", 5, None, self.fix_assignment))
-        self.rules.append(("(FUNCTION) (ARGS) = (PARAMETERS)", 5, None, self.fix_func))
+        self.rules.append(("let (VARIABLE) = (VAL)", 9, None, self.fix_assignment))
+        self.rules.append(("(FUNCTION) (ARGS) = (PARAMETERS)", 5, None, self.fix_func_decl))
         self.rules.append(('(.*)', 0, None, self.fix_default))  # If nothing else works this will
 
         LOGGER.debug('Compiling main haskell rules.')
@@ -81,15 +79,6 @@ class HaskellCodeFixer(CodeFixer):
         pass
 
     def fix_not(self, match, poss_chars):
-        pass
-
-    def fix_succ(self, match, poss_chars):
-        pass
-
-    def fix_min(self, match, poss_chars):
-        pass
-
-    def fix_max(self, match, poss_chars):
         pass
 
     def fix_assignment(self, match, poss_chars):
