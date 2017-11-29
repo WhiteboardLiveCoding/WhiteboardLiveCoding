@@ -83,6 +83,26 @@ def api_resubmit_code():
         return render_template('resubmit_test.html')
 
 
+@app.route("/api/template", methods=['POST'])
+def api_resubmit_code():
+    if request.method == 'POST':
+        template_file = request.files.get('templateFile')
+        test_file = request.files.get('templateFile')
+
+        if not template_file or not test_file:
+            return json.dumps({'id': '', 'error': 'Files Missing', 'success': False})
+
+        azure = WLCAzure()
+        key, err = azure.save_template_and_test('template', template_file, test_file)
+
+        if err == 1:
+            return json.dumps({'id': '', 'error': 'Template already exists', 'success': False})
+        elif err == 2:
+            return json.dumps({'id': '', 'error': 'File Upload Failed', 'success': False})
+
+        return json.dumps({'id': str(key), 'error': '', 'success': True})
+
+
 def _get_ar_coordinates(pic, errors):
     # calculate mins, maxs
     min_x = min_y = sys.maxsize
