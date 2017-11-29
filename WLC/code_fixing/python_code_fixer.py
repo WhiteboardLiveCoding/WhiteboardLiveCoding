@@ -9,7 +9,7 @@ import editdistance
 import regex
 from stdlib_list import stdlib_list
 
-from ..code_fixing.static import get_functions
+from ..code_fixing.static import standard_python_functions
 
 PERMUTATION_LENGTH = 5
 ALLOWED_DIFFERENCE = 0.25
@@ -28,7 +28,7 @@ class PythonCodeFixer:
         self.statements = []
 
         self.curr_line_n = 0
-        self.context = {'variables': [], 'functions': get_functions(), 'classes': [], 'imports': [], 'methods': []}
+        self.context = {'variables': [], 'functions': standard_python_functions(), 'classes': [], 'imports': [], 'methods': []}
 
         self.class_indent = 0
         self.class_context = collections.defaultdict(lambda: collections.defaultdict(list))

@@ -4,10 +4,12 @@ from ..code_executor.python_executor import PythonExecutor
 
 class CodeExecutor:
     def __init__(self, language="python3", ip="", port=""):
-        if language == "haskell":
+        if language.lower() == "haskell":
             self.executor = HaskellExecutor(ip, port)
-        else:
+        elif language.lower() == "python3":
             self.executor = PythonExecutor(ip, port)
+        else:
+            raise Exception("Unsupported CodeExecutor language.")
 
     def process_picture(self, picture_in):
         return self.executor.process_picture(picture_in)
