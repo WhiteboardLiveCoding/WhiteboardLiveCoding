@@ -16,3 +16,6 @@ stdlib_list
 Flask
 git+git://github.com/WhiteboardLiveCoding/ImageSegmentation.git
 hackerrank-sdk
+astroid
+isort
+pylint
