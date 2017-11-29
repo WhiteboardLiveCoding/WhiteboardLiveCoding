@@ -1,10 +1,13 @@
 import logging
 import re
-import traceback
+import tempfile
+import json
 
 import docker
 import os
+
 from hackerrank.HackerRankAPI import HackerRankAPI
+from pylint import epylint as lint
 
 from ..utils.azure import WLCAzure
 from ..ocr.picture_ocr import PictureOCR
@@ -41,19 +44,33 @@ class CodeExecutor:
         code, fixed_code = self.process_picture(picture_in)
 
         LOGGER.info("Unfixed code OCRd from image: \n%s\n", code)
-        result, error = self.execute_code(fixed_code)
+        result, errors = self.execute_code(fixed_code)
 
-        return code, fixed_code, result, error
+        LOGGER.info("Errors: \n%s\n", errors)
+
+        return code, fixed_code, result, errors
 
     def execute_code(self, code):
         LOGGER.info("Executing code: \n%s\n", code)
 
         if self.force_local:
-            result, error = self.execute_local(code)
+            result = self.execute_local(code)
         else:
-            result, error = self.execute_sandbox(code)
+            result = self.execute_sandbox(code)
 
-        return result, error
+        file_code = tempfile.NamedTemporaryFile(delete=False, suffix='.py')
+        file_code.write(code.encode('utf8'))
+        file_code.close()
+
+        (pylint_stdout, _) = lint.py_run(
+            command_options=file_code.name.replace("\\", "/") + " -E -r n -f json", return_std=True)
+
+        os.unlink(file_code.name)
+
+        if pylint_stdout.getvalue():
+            return result, json.loads(pylint_stdout.getvalue())
+
+        return result, {}
 
     def execute_tests(self, code, test_key):
         azure = WLCAzure()
@@ -82,7 +99,6 @@ class CodeExecutor:
     def execute_local(self, code):
         LOGGER.info("Executing locally (UNSAFE! use -ip parameter to run the code safely) . . .\n")
 
-        error_string = None
         stdout_prog = ""
 
         with redirected_std() as out:
@@ -90,17 +106,13 @@ class CodeExecutor:
                 exec(code)
                 stdout_prog = out.str_stdout
             except:
-                error_string = traceback.format_exc()
-
-        if error_string:
-            e = self.parse_error(error_string)
-            return self.NO_OUTPUT, e
+                pass
 
         if not stdout_prog:
             stdout_prog = self.NO_OUTPUT
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog, ExecutorError()
+        return stdout_prog
 
     def execute_sandbox(self, code):
         LOGGER.info("Executing in sandbox . . .\n")
@@ -108,18 +120,11 @@ class CodeExecutor:
         container.wait()
 
         stdout_prog = container.logs(stdout=True).decode("utf-8")
-        stderr_prog = container.logs(stderr=True).decode("utf-8")
-
-        error_match, _ = self.find_error(stderr_prog)
-        if error_match:
-            error_parsed = self.parse_error(stderr_prog)
-            return self.NO_OUTPUT, error_parsed
-
         if not stdout_prog:
             stdout_prog = self.NO_OUTPUT
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog, ExecutorError()
+        return stdout_prog
 
     def find_error(self, err):
         start_point = err.find("<string>")

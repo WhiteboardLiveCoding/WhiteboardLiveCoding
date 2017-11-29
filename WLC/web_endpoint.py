@@ -34,16 +34,16 @@ def api_upload_image():
         saved, key = azure.save_image_to_azure('pictures', pic.get_image())
 
         executor = CodeExecutor()
-        code, fixed_code, result, error = executor.execute_code_img(pic)
+        code, fixed_code, result, errors = executor.execute_code_img(pic)
 
-        if 'test_key' in request.json:
+        if request.json and 'test_key' in request.json:
             test_results = executor.execute_tests(code, request.json.get('test_key'))
         else:
             test_results = []
 
-        ar = _get_ar_coordinates(pic, error)
+        ar = _get_ar_coordinates(pic, errors)
 
-        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'error': str(error), 'key': key,
+        response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'errors': errors, 'key': key,
                     'ar': ar, 'test_results': test_results}
 
         return json.dumps(response)
@@ -56,9 +56,9 @@ def api_resubmit_code():
     if request.method == 'POST':
         code = request.json.get('code')
         executor = CodeExecutor()
-        result, error = executor.execute_code(code)
+        result, errors = executor.execute_code(code)
 
-        if 'test_key' in request.json:
+        if request.json and 'test_key' in request.json:
             test_results = executor.execute_tests(code, request.json.get('test_key'))
         else:
             test_results = []
@@ -69,23 +69,31 @@ def api_resubmit_code():
         pic = Picture(image, 0, 0, width, height)
         pic = Preprocessor().process(pic)
         pic.get_segments()
-        ar = _get_ar_coordinates(pic, error)
+        ar = _get_ar_coordinates(pic, errors)
 
         azure = WLCAzure()
         azure.save_code_to_azure('code', 'pictures', key, code)
 
-        return json.dumps({'result': str(result), 'error': str(error), 'ar': ar, 'key': key,
+        return json.dumps({'result': str(result), 'errors': errors, 'ar': ar, 'key': key,
                            'test_results': test_results})
     else:
         return render_template('resubmit_test.html')
 
 
-def _get_ar_coordinates(pic, error):
-    return {
+def _get_ar_coordinates(pic, errors):
+    ar_coords = {
         'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
-        'line': pic.get_line_coordinates(error.get_line()),
-        'character': pic.get_character_coordinates(error.get_line(), error.get_column())
+        'errors': [],
     }
+
+    for error in errors:
+        ar_coords['errors'].append(
+            {
+                'line': pic.get_line_coordinates(error['line']),
+                'character': pic.get_character_coordinates(error['line'], error['column']-1)
+            })
+
+    return ar_coords
 
 
 def _url_to_image(url):
