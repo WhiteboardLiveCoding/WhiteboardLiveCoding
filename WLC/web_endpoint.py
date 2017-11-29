@@ -84,7 +84,7 @@ def api_resubmit_code():
 
 
 @app.route("/api/template", methods=['POST'])
-def api_resubmit_code():
+def api_template():
     if request.method == 'POST':
         template_file = request.files.get('templateFile')
         test_file = request.files.get('templateFile')
