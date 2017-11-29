@@ -19,12 +19,11 @@ class AbstractCodeExecutor:
     def __init__(self, language, fixer, ip="", port=""):
         self.language = language
         self.fixer = fixer
+        self.force_local = True
 
         if ip and port:
             self.client = docker.DockerClient(base_url="tcp://{}:{}".format(ip, port))
             self.force_local = False
-        else:
-            self.force_local = True
 
     def process_picture(self, picture_in):
         image = Preprocessor().process(picture_in)
@@ -37,7 +36,7 @@ class AbstractCodeExecutor:
     def execute_code_img(self, picture_in):
         code, fixed_code = self.process_picture(picture_in)
 
-        LOGGER.info("Unfixed code OCRd from image: \n%s\n", code)
+        LOGGER.info("Unfixed code recognized from image: \n%s\n", code)
         result, errors = self.execute_code(fixed_code)
 
         LOGGER.info("Errors: \n%s\n", errors)
@@ -77,7 +76,7 @@ class AbstractCodeExecutor:
         for i in range(len(test_cases)):
             results.append({'passed': result.output[i] == expected_responses[i], 'output': result.output[i]})
 
-        return result
+        return results
 
     def execute_local(self, code):
         raise NotImplemented()
