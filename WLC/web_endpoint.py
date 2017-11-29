@@ -1,4 +1,5 @@
 import json
+import os
 from urllib.request import urlopen
 
 import numpy as np
@@ -17,7 +18,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return "Nothing to see here, this is just the API."
+    build_id = os.environ['BUILD_NUM'] if 'BUILD_NUM' in os.environ else 'local'
+    return "Nothing to see here, this is just the API. Circle build id: {}.".format(build_id)
 
 
 @app.route("/api/upload_image", methods=['POST', 'GET'])
