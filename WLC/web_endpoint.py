@@ -3,6 +3,7 @@ import os
 from urllib.request import urlopen
 
 import numpy as np
+import sys
 from cv2 import cv2, IMREAD_COLOR
 
 from flask import Flask, render_template
@@ -83,8 +84,24 @@ def api_resubmit_code():
 
 
 def _get_ar_coordinates(pic, errors):
+    # calculate mins, maxs
+    min_x = min_y = sys.maxsize
+    max_x = max_y = 0
+
+    i = 1
+    line = pic.get_line_coordinates(i)
+    while line:
+        min_x = min(min_x, line['x']);
+        min_y = min(min_y, line['y']);
+        max_x = max(max_x, line['x'] + line['width']);
+        max_y = max(max_y, line['y'] + line['height']);
+
+        line = pic.get_line_coordinates(i)
+        i = i + 1  
+      
     ar_coords = {
         'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
+        'bbox': {'min_x': min_x, 'min_y': min_y, 'max_x': max_x, 'max_y': max_y},
         'errors': [],
     }
 
