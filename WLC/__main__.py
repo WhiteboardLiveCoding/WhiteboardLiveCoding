@@ -2,7 +2,8 @@ import argparse
 import logging
 import tkinter as tk
 
-from WLC.code_executor.executor import CodeExecutor, DEFAULT_DOCKER_PORT
+from WLC.code_executor.abstract_executor import DEFAULT_DOCKER_PORT
+from WLC.code_executor.code_executor import CodeExecutor
 from WLC.image_processing.camera import Camera
 from WLC.utils.formatting import FORMAT
 from WLC.utils.gui import Gui
@@ -76,7 +77,7 @@ def main():
         app.mainloop()
 
     else:
-        CodeExecutor(docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
+        CodeExecutor("python3", docker_ip, DEFAULT_DOCKER_PORT).execute_code_img(picture)
 
 
 if __name__ == '__main__':

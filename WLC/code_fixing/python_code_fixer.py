@@ -17,7 +17,7 @@ ALLOWED_DIFFERENCE = 0.25
 LOGGER = logging.getLogger()
 
 
-class CodeFixer:
+class PythonCodeFixer:
     def __init__(self, code, indents, poss_lines):
         self.code = code
         self.indents = indents
