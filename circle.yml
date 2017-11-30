@@ -7,16 +7,24 @@ machine:
 dependencies:
   pre:
     - pip install --upgrade -r requirements.txt
+    - >
+     docker build
+     --build-arg ARG_BLOB_ACCOUNT=$ARG_BLOB_ACCOUNT
+     --build-arg ARG_BLOB_KEY=$ARG_BLOB_KEY
+     --build-arg ARG_HACKER_RANK_KEY=$ARG_HACKER_RANK_KEY
+     --build-arg CIRCLE_BUILD_NUM=$CIRCLE_BUILD_NUM
+     --rm=false -t mz4315/whiteboardlivecoding-ocr .
 
 test:
   override:
+    - docker run -d -p 80:80 mz4315/whiteboardlivecoding-ocr
     - pytest WLC/tests.py
+    - curl --retry 10 --retry-delay 5 -v http://localhost:80
 
 deployment:
   hub:
     branch: master
     commands:
       - docker info
-      - docker build --build-arg ARG_BLOB_ACCOUNT=$ARG_BLOB_ACCOUNT --build-arg ARG_BLOB_KEY=$ARG_BLOB_KEY --rm=false -t mz4315/whiteboardlivecoding-ocr .
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
       - docker push mz4315/whiteboardlivecoding-ocr
