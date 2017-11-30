@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import json
 
 import cv2
 from azure.storage.blob import BlockBlobService, ContentSettings
@@ -82,13 +83,21 @@ class WLCAzure:
 
         return hashed, 0
 
-    def get_tests_from_azure(self, test_key):
-        containers = ['template_code', 'test_cases', 'expected_responses']
+    def get_tests_from_azure(self, hash):
+        container = 'template'
 
-        self.create_containers_not_exist(containers)
-        data = self.get_data_from_blobs(containers, test_key)
+        template = '{}.py'.format(hash)
+        tests = '{}.json'.format(hash)
 
-        return data[0], data[1], data[2]
+        template_blob = self._block_blob_service.get_blob_to_text(container, template)
+        tests_blob = self._block_blob_service.get_blob_to_text(container, tests)
+
+        tests_json = json.loads(tests_blob.content)
+        inputs = [testcase.get('input', '') for testcase in tests_json]
+        outputs = [testcase.get('output', '') for testcase in tests_json]
+        hints = [testcase.get('hint', '') for testcase in tests_json]
+
+        return template_blob.content, inputs, outputs, hints
 
     def save_code_to_azure(self, container, image_container, key, code):
         """

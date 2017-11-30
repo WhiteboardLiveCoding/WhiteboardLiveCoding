@@ -54,10 +54,10 @@ class AbstractCodeExecutor:
 
     def execute_tests(self, code, test_key):
         azure = WLCAzure()
-        template_code, test_cases, expected_responses = azure.get_tests_from_azure(test_key)
-        return self._execute_hacker_rank(template_code.format(code), test_cases, expected_responses)
+        template_code, test_cases, expected_responses, hints = azure.get_tests_from_azure(test_key)
+        return self._execute_hacker_rank(template_code.format(code), test_cases, expected_responses, hints)
 
-    def _execute_hacker_rank(self, code, test_cases, expected_responses):
+    def _execute_hacker_rank(self, code, test_cases, expected_responses, hints):
         if 'HACKER_RANK_KEY' not in os.environ:
             raise ValueError('HACKER_RANK_KEY not provided')
 
@@ -72,7 +72,7 @@ class AbstractCodeExecutor:
         results = []
 
         for i in range(len(test_cases)):
-            results.append({'passed': result.output[i] == expected_responses[i], 'output': result.output[i]})
+            results.append({'passed': result.output[i] == expected_responses[i], 'hint': hints[i]})
 
         return results
 

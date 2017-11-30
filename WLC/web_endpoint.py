@@ -39,15 +39,15 @@ def api_upload_image():
         executor = get_executor(request)
         code, fixed_code, result, errors = executor.execute_code_img(pic)
 
-        if 'test_key' in request.args:
-            test_results = executor.execute_tests(code, request.args.get('test_key'))
+        if len(errors) == 0 and 'template' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('template'))
         else:
             test_results = []
 
         ar = _get_ar_coordinates(pic, errors)
 
         response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'errors': errors, 'key': key,
-                    'ar': ar, 'test_results': test_results}
+                    'ar': ar, 'testResults': test_results}
 
         return json.dumps(response)
     else:
@@ -61,8 +61,8 @@ def api_resubmit_code():
         executor = get_executor(request)
         result, errors = executor.execute_code(code)
 
-        if 'test_key' in request.args:
-            test_results = executor.execute_tests(code, request.args.get('test_key'))
+        if len(errors) == 0 and 'template' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('template'))
         else:
             test_results = []
 
@@ -78,7 +78,7 @@ def api_resubmit_code():
         azure.save_code_to_azure('code', 'pictures', key, code)
 
         return json.dumps({'result': str(result), 'errors': errors, 'ar': ar, 'key': key,
-                           'test_results': test_results})
+                           'testResults': test_results})
     else:
         return render_template('resubmit_test.html')
 
@@ -87,7 +87,7 @@ def api_resubmit_code():
 def api_template():
     if request.method == 'POST':
         template_file = request.files.get('templateFile')
-        test_file = request.files.get('templateFile')
+        test_file = request.files.get('testFile')
 
         if not template_file or not test_file:
             return json.dumps({'id': '', 'error': 'Files Missing', 'success': False})
