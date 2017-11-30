@@ -1,0 +1,17 @@
+[
+  {
+    "input": "0\n1",
+    "output": "1\n",
+    "hint": "Simple addition!"
+  },
+  {
+    "input": "2\n3",
+    "output": "5\n",
+    "hint": "Simple addition!"
+  },
+  {
+    "input": "1000\n1111",
+    "output": "2111\n",
+    "hint": "Simple addition!"
+  }
+]

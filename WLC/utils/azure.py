@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import json
 
 import cv2
 from azure.storage.blob import BlockBlobService, ContentSettings
@@ -63,13 +64,40 @@ class WLCAzure:
 
         return True, hashed
 
-    def get_tests_from_azure(self, test_key):
-        containers = ['template_code', 'test_cases', 'expected_responses']
+    def save_template_and_test(self, container, template_file, test_file):
+        self.create_container_not_exists(container)
 
-        self.create_containers_not_exist(containers)
-        data = self.get_data_from_blobs(containers, test_key)
+        template = template_file.read()
+        test = test_file.read()
 
-        return data[0], data[1], data[2]
+        hashed = hashlib.md5(template).hexdigest()
+
+        template_filename = '{}.py'.format(hashed)
+        test_filename = '{}.json'.format(hashed)
+
+        try:
+            self._block_blob_service.create_blob_from_text(container, template_filename, template)
+            self._block_blob_service.create_blob_from_text(container, test_filename, test)
+        except Exception:
+            return '', -1
+
+        return hashed, 0
+
+    def get_tests_from_azure(self, hash):
+        container = 'template'
+
+        template = '{}.py'.format(hash)
+        tests = '{}.json'.format(hash)
+
+        template_blob = self._block_blob_service.get_blob_to_text(container, template)
+        tests_blob = self._block_blob_service.get_blob_to_text(container, tests)
+
+        tests_json = json.loads(tests_blob.content)
+        inputs = [testcase.get('input', '') for testcase in tests_json]
+        outputs = [testcase.get('output', '') for testcase in tests_json]
+        hints = [testcase.get('hint', '') for testcase in tests_json]
+
+        return template_blob.content, inputs, outputs, hints
 
     def save_code_to_azure(self, container, image_container, key, code):
         """
