@@ -4,7 +4,7 @@ import logging
 
 from stdlib_list import stdlib_list
 
-from WLC.code_fixing.code_fixer import CodeFixer
+from ..code_fixing.code_fixer import CodeFixer
 from ..code_fixing.static import standard_python_functions
 
 LOGGER = logging.getLogger()

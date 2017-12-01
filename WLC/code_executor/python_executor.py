@@ -1,11 +1,8 @@
-import json
-import re
 import tempfile
-import traceback
-
 import os
-from pylint import epylint as lint
+from pylint import lint
 
+from ..code_executor.pylint_reporter import CustomJSONReporter
 from ..code_fixing.python_code_fixer import PythonCodeFixer
 from ..code_executor.executor_error import ExecutorError
 from ..code_executor.redirected_std import redirected_std
@@ -32,7 +29,7 @@ class PythonExecutor(AbstractCodeExecutor):
             stdout_prog = self.NO_OUTPUT
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog
+        return stdout_prog, self._get_code_errors(code)
 
     def execute_sandbox(self, code):
         LOGGER.info("Executing in sandbox . . .\n")
@@ -47,17 +44,18 @@ class PythonExecutor(AbstractCodeExecutor):
         LOGGER.info("Output:\n%s\n", stdout_prog)
         return stdout_prog, ExecutorError()
 
-    def get_code_errors(self, code):
+    def _get_code_errors(self, code):
         file_code = tempfile.NamedTemporaryFile(delete=False, suffix='.py')
         file_code.write(code.encode('utf8'))
         file_code.close()
 
-        (pylint_stdout, _) = lint.py_run(
-            command_options=file_code.name.replace("\\", "/") + " -E -r n -f json", return_std=True)
+        json_reporter = CustomJSONReporter()
+        linter = lint.PyLinter(reporter=json_reporter)
+        linter.load_default_plugins()
+        linter.error_mode()
+
+        linter.check(file_code.name.replace('\\', '/'))
 
         os.unlink(file_code.name)
 
-        if pylint_stdout.getvalue():
-            return json.loads(pylint_stdout.getvalue())
-        else:
-            return []
+        return json_reporter.get_errors_json()

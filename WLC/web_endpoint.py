@@ -1,7 +1,9 @@
 import json
+import os
 from urllib.request import urlopen
 
 import numpy as np
+import sys
 from cv2 import cv2, IMREAD_COLOR
 
 from flask import Flask, render_template
@@ -17,7 +19,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return "Nothing to see here, this is just the API."
+    build_id = os.environ['BUILD_NUM'] if 'BUILD_NUM' in os.environ else 'local'
+    return "Nothing to see here, this is just the API. Circle build id: {}.".format(build_id)
 
 
 @app.route("/api/upload_image", methods=['POST', 'GET'])
@@ -36,15 +39,15 @@ def api_upload_image():
         executor = get_executor(request)
         code, fixed_code, result, errors = executor.execute_code_img(pic)
 
-        if 'test_key' in request.args:
-            test_results = executor.execute_tests(code, request.args.get('test_key'))
+        if len(errors) == 0 and 'template' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('template'))
         else:
             test_results = []
 
         ar = _get_ar_coordinates(pic, errors)
 
         response = {'unfixed': code, 'fixed': fixed_code, 'result': str(result), 'errors': errors, 'key': key,
-                    'ar': ar, 'test_results': test_results}
+                    'ar': ar, 'testResults': test_results}
 
         return json.dumps(response)
     else:
@@ -58,8 +61,8 @@ def api_resubmit_code():
         executor = get_executor(request)
         result, errors = executor.execute_code(code)
 
-        if 'test_key' in request.args:
-            test_results = executor.execute_tests(code, request.args.get('test_key'))
+        if len(errors) == 0 and 'template' in request.args:
+            test_results = executor.execute_tests(code, request.args.get('template'))
         else:
             test_results = []
 
@@ -75,14 +78,48 @@ def api_resubmit_code():
         azure.save_code_to_azure('code', 'pictures', key, code)
 
         return json.dumps({'result': str(result), 'errors': errors, 'ar': ar, 'key': key,
-                           'test_results': test_results})
+                           'testResults': test_results})
     else:
         return render_template('resubmit_test.html')
 
 
+@app.route("/api/template", methods=['POST'])
+def api_template():
+    if request.method == 'POST':
+        template_file = request.files.get('templateFile')
+        test_file = request.files.get('testFile')
+
+        if not template_file or not test_file:
+            return json.dumps({'id': '', 'error': 'Files Missing', 'success': False})
+
+        azure = WLCAzure()
+        key, err = azure.save_template_and_test('template', template_file, test_file)
+
+        if err != 0:
+            return json.dumps({'id': '', 'error': 'File Upload Failed', 'success': False})
+
+        return json.dumps({'id': str(key), 'error': '', 'success': True})
+
+
 def _get_ar_coordinates(pic, errors):
+    # calculate mins, maxs
+    min_x = min_y = sys.maxsize
+    max_x = max_y = 0
+
+    i = 1
+    line = pic.get_line_coordinates(i)
+    while line:
+        min_x = min(min_x, line['x']);
+        min_y = min(min_y, line['y']);
+        max_x = max(max_x, line['x'] + line['width']);
+        max_y = max(max_y, line['y'] + line['height']);
+
+        line = pic.get_line_coordinates(i)
+        i = i + 1  
+      
     ar_coords = {
         'dimensions': {'width': pic.get_width(), 'height': pic.get_height()},
+        'bbox': {'min_x': min_x, 'min_y': min_y, 'max_x': max_x, 'max_y': max_y},
         'errors': [],
     }
 
