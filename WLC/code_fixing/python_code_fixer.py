@@ -11,7 +11,7 @@ from stdlib_list import stdlib_list
 
 from ..code_fixing.static import get_functions
 
-PERMUTATION_LENGTH = 5
+PERMUTATION_LENGTH = 3
 ALLOWED_DIFFERENCE = 0.25
 
 LOGGER = logging.getLogger()
