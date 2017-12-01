@@ -44,19 +44,19 @@ class PythonCodeFixer:
         self.syntax.append(('STATEMENT', '.+'))
         self.syntax.append(('PARAMETERS', '.*'))
 
-        self.statements.append(('(FUNCTION)\((PARAMETERS)\)', 2, None, self.fix_func_or_class_call))
-        self.statements.append(('lambda (PARAMETERS): (STATEMENT)', 9, None, self.fix_lambda))
-        self.statements.append(('(VARIABLE)\.(FUNCTION)\((PARAMETERS)\)', 3, None, self.fix_method_call))
-        self.statements.append(('(self)\.(FUNCTION)\((PARAMETERS)\)', 7, None, self.fix_self_method_call))
+        self.statements.append(('(FUNCTION)(?: )?\((?: )?(PARAMETERS)(?: )?\)', 2, None, self.fix_func_or_class_call))
+        self.statements.append(('lambda (PARAMETERS):(?: )?(STATEMENT)', 9, None, self.fix_lambda))
+        self.statements.append(('(VARIABLE)\.(FUNCTION)(?: )?\((?: )?(PARAMETERS)(?: )?\)', 3, None, self.fix_method_call))
+        self.statements.append(('(self)\.(FUNCTION)(?: )?\((?: )?(PARAMETERS)(?: )?\)', 7, None, self.fix_self_method_call))
         self.statements.append(('(STATEMENT) and (STATEMENT)', 5, None, self.fix_and))
         self.statements.append(('(STATEMENT) or (STATEMENT)', 4, None, self.fix_or))
         self.statements.append(('not (STATEMENT)', 4, None, self.fix_not))
         self.statements.append(('(STATEMENT) for (VARIABLE) in (STATEMENT)', 9, None, self.fix_generator))
-        self.statements.append(('\[(STATEMENT) for (VARIABLE) in (STATEMENT)\]', 11, None, self.fix_list_comp))
+        self.statements.append(('\[(?: )?(STATEMENT) for (VARIABLE) in (STATEMENT)(?: )?\]', 11, None, self.fix_list_comp))
         self.statements.append(
-            ('(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)', 16, None, self.fix_range_generator))
+            ('(STATEMENT) for (VARIABLE) in range(?: )?\((?: )?(STATEMENT)(?: )?\)', 16, None, self.fix_range_generator))
         self.statements.append(
-            ('\[(STATEMENT) for (VARIABLE) in range\((STATEMENT)\)\]', 18, None, self.fix_range_list_comp))
+            ('\[(?: )?(STATEMENT) for (VARIABLE) in range(?: )?\((STATEMENT)\)(?: )?\]', 18, None, self.fix_range_list_comp))
         self.statements.append(('true', 4, None, lambda x, y: "True"))
         self.statements.append(('false', 5, None, lambda x, y: "False"))
         self.statements.append(('none', 4, None, lambda x, y: "None"))
@@ -75,18 +75,18 @@ class PythonCodeFixer:
         self.rules.append(('import (.*)', 7, None, self.fix_import))
         self.rules.append(('import (.*?) as (.*)', 11, None, self.fix_import_as))
         self.rules.append(('from (.*?) import (.*)', 13, None, self.fix_from_import))
-        self.rules.append(('def (VARIABLE)\((PARAMETERS)\):', 7, self.analyze_def, self.fix_def))
-        self.rules.append(('class (VARIABLE):', 7, self.analyze_class, self.fix_class))
-        self.rules.append(('if (STATEMENT):', 4, None, self.fix_if))
-        self.rules.append(('elif (STATEMENT):', 6, None, self.fix_elif))
+        self.rules.append(('def (VARIABLE)(?: )?\((PARAMETERS)\)(?: )?:', 7, self.analyze_def, self.fix_def))
+        self.rules.append(('class (VARIABLE)(?: )?:', 7, self.analyze_class, self.fix_class))
+        self.rules.append(('if (STATEMENT)(?: )?:', 4, None, self.fix_if))
+        self.rules.append(('elif (STATEMENT)(?: )?:', 6, None, self.fix_elif))
         self.rules.append(('return (STATEMENT)', 7, None, self.fix_return))
-        self.rules.append(('while (STATEMENT):', 7, None, self.fix_while))
+        self.rules.append(('while (STATEMENT)(?: )?:', 7, None, self.fix_while))
         self.rules.append(('for (VARIABLE) in (STATEMENT):', 9, self.analyze_for, self.fix_for))
-        self.rules.append(('for (VARIABLE) in range\((STATEMENT)\):', 16, self.analyze_for_range, self.fix_for_range))
-        self.rules.append(('(FUNCTION)\((PARAMETERS)\)', 2, None, self.fix_function_call))
-        self.rules.append(('(VARIABLE)\.(FUNCTION)\((PARAMETERS)\)', 3, None, self.fix_method_call))
-        self.rules.append(('self\.(FUNCTION)\((PARAMETERS)\)', 7, None, self.fix_self_method_call))
-        self.rules.append(('(VARIABLE) = (STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
+        self.rules.append(('for (VARIABLE) in range(?: )?\((?: )?(STATEMENT)(?: )?\):', 16, self.analyze_for_range, self.fix_for_range))
+        self.rules.append(('(FUNCTION)\((?: )?(PARAMETERS)(?: )?\)', 2, None, self.fix_function_call))
+        self.rules.append(('(VARIABLE)(?: )?=(?: )?(STATEMENT)', 3, self.analyze_assignment, self.fix_assignment))
+        self.rules.append(('(VARIABLE)\.(FUNCTION)(?: )?\((?: )?(PARAMETERS)(?: )?\)', 3, None, self.fix_method_call))
+        self.rules.append(('self\.(FUNCTION)(?: )?\((?: )?(PARAMETERS)(?: )?\)', 7, None, self.fix_self_method_call))
         self.rules.append(('assert (STATEMENT)', 7, None, self.fix_assert))
         self.rules.append(('del (STATEMENT)', 4, None, self.fix_del))
         self.rules.append(('raise (STATEMENT)', 6, None, self.fix_raise))
@@ -153,6 +153,17 @@ class PythonCodeFixer:
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
+    def get_fixed_weight(self, match, string):
+        groups = match.groups()
+        res = ""
+        prev = 0
+        for g in range(len(groups) - 1):
+            res += string[prev: match.start(g + 2)]
+            prev = match.end(g + 2)
+        else:
+            res += string[prev:]
+        return len(res)
+
     def find_closest_match(self, poss_line, regexes):
         """
         Finds the closest regex to the line provided looking at possible permutations of characters.
@@ -167,13 +178,14 @@ class PythonCodeFixer:
         LOGGER.debug('Permutating.')
 
         LOGGER.debug("Checking {} regex fixes for a good match.".format(len(regexes)))
-        for r, fixed, analyze, fix in regexes:
+        for r, _, analyze, fix in regexes:  # TODO: clean 'regexes' to remove the _ var
             # duplicate generator to reuse it at each iteration.
             permutations, permutations_main = tee(permutations_main)
             for possible in permutations:
                 match = r.match(possible)
 
                 if match:
+                    fixed = self.get_fixed_weight(match, possible)
                     # use fuzzy counts here
                     if sum(match.fuzzy_counts) - fixed < distance:
                         distance = sum(match.fuzzy_counts) - fixed
