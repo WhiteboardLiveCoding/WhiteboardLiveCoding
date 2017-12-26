@@ -109,10 +109,10 @@ def _get_ar_coordinates(pic, errors):
     i = 1
     line = pic.get_line_coordinates(i)
     while line:
-        min_x = min(min_x, line['x']);
-        min_y = min(min_y, line['y']);
-        max_x = max(max_x, line['x'] + line['width']);
-        max_y = max(max_y, line['y'] + line['height']);
+        min_x = min(min_x, line['x'])
+        min_y = min(min_y, line['y'])
+        max_x = max(max_x, line['x'] + line['width'])
+        max_y = max(max_y, line['y'] + line['height'])
 
         line = pic.get_line_coordinates(i)
         i = i + 1  

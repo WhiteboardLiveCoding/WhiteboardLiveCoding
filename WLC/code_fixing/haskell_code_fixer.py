@@ -80,22 +80,20 @@ class HaskellCodeFixer(CodeFixer):
         return "\n".join("{indent}{code}".format(indent="  " * indent, code=line) for indent, line in
                          zip(self.indents, fixed_lines))
 
-    def analyse_global_assignment(self, match, line_n):
-        groups = match.groups()
+    def analyse_global_assignment(self, groups, line_n):
         var_name = groups[1]
         self.context['functions'].append(var_name)
         LOGGER.debug("{} var added to global scope".format(var_name))
 
 
-    def analyse_func(self, match, line_n):
-        groups = match.groups()
+    def analyse_func(self, groups, line_n):
         func_name = groups[1]  # add to global scope
         self.curr_func = func_name
         self.context['functions'].append(func_name)
         LOGGER.debug("{} function added to global scope".format(func_name))
 
         func_args = groups[2].split()  # add to function scope
-        self.func_context[self.curr_func2]['variables'].extend(func_args)
+        self.func_context[self.curr_func]['variables'].extend(func_args)
         LOGGER.debug("{} added to local function scope".format(func_args))
 
     def fix_and(self, match, poss_chars):
