@@ -1,12 +1,15 @@
+import hashlib
 import json
 import os
 from urllib.request import urlopen
 
 import numpy as np
 import sys
-from cv2 import cv2, IMREAD_COLOR
 
-from flask import Flask, render_template
+from cv2 import cv2, IMREAD_COLOR
+from ttldict import TTLOrderedDict
+
+from flask import Flask, render_template, g
 from flask import request
 from image_segmentation.picture import Picture
 from image_segmentation.preprocessor import Preprocessor
@@ -15,6 +18,7 @@ from .code_executor.code_executor import CodeExecutor
 from .utils.azure import WLCAzure
 
 app = Flask(__name__)
+image_cache = TTLOrderedDict(default_ttl=30 * 60)
 
 
 @app.route("/")
@@ -32,9 +36,11 @@ def api_upload_image():
 
         height, width, _ = img.shape
         pic = Picture(img, 0, 0, width, height, None)
+        key = hashlib.md5(img.tobytes()).hexdigest()
+        image_cache[key] = img
 
-        azure = WLCAzure()
-        saved, key = azure.save_image_to_azure('pictures', pic.get_image())
+        g.pic = pic
+        g.hashed = key
 
         executor = get_executor(request)
         code, fixed_code, result, errors = executor.execute_code_img(pic)
@@ -54,10 +60,32 @@ def api_upload_image():
         return render_template('upload_test.html')
 
 
+@app.after_request
+def save_to_azure(response):
+    pic = g.get('pic')
+    hashed = g.get('hashed')
+    key = g.get('key')
+    code = g.get('code')
+    azure = WLCAzure()
+
+    if pic is not None and hashed is not None:
+        azure.save_image_to_azure('pictures', pic.get_image(), hashed)
+
+    if key is not None and code is not None:
+        azure.save_code_to_azure('code', 'pictures', key, code)
+
+    return response
+
+
 @app.route("/api/resubmit_code", methods=['POST', 'GET'])
 def api_resubmit_code():
     if request.method == 'POST':
         code = request.json.get('code')
+        key = request.json.get('key')
+
+        g.code = code
+        g.key = key
+
         executor = get_executor(request)
         result, errors = executor.execute_code(code)
 
@@ -66,16 +94,16 @@ def api_resubmit_code():
         else:
             test_results = []
 
-        key = request.json.get('key')
-        image = _url_to_image('https://alpstore.blob.core.windows.net/pictures/{}'.format(key))
+        try:
+            image = image_cache[key]
+        except KeyError:
+            image = _url_to_image('https://alpstore.blob.core.windows.net/pictures/{}'.format(key))
+
         height, width, _ = image.shape
         pic = Picture(image, 0, 0, width, height)
         pic = Preprocessor().process(pic)
         pic.get_segments()
         ar = _get_ar_coordinates(pic, errors)
-
-        azure = WLCAzure()
-        azure.save_code_to_azure('code', 'pictures', key, code)
 
         return json.dumps({'result': str(result), 'errors': errors, 'ar': ar, 'key': key,
                            'testResults': test_results})

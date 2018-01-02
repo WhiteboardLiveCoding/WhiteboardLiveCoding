@@ -2,7 +2,7 @@ import logging
 
 import collections
 
-from WLC.code_fixing.code_fixer import CodeFixer
+from ..code_fixing.code_fixer import CodeFixer
 
 LOGGER = logging.getLogger()
 

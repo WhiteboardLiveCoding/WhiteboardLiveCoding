@@ -19,3 +19,4 @@ hackerrank-sdk
 astroid
 isort
 pylint
+ttldict
