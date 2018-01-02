@@ -83,6 +83,7 @@ class PythonCodeFixer(CodeFixer):
         self.rules.append(('assert (STATEMENT)', 7, None, self.fix_assert))
         self.rules.append(('del (STATEMENT)', 4, None, self.fix_del))
         self.rules.append(('raise (STATEMENT)', 6, None, self.fix_raise))
+        self.rules.append(('global (VARIABLE)', 7, None, self.fix_global))
         self.rules.append(('pass', 4, None, lambda x, y: 'pass'))
         self.rules.append(('else:', 5, None, lambda x, y: 'else:'))
         self.rules.append(('break', 5, None, lambda x, y: 'break'))
@@ -474,6 +475,14 @@ class PythonCodeFixer(CodeFixer):
         groups = match.groups()
         LOGGER.debug("Fixing raise. From {} to {}.".format(*groups[1:]))
         return 'raise {}'.format(*groups[1:])
+
+    def fix_global(self, match, poss_chars):
+        groups = match.groups()
+        poss_global = poss_chars[match.start(2): match.end(2)]
+
+        closest, _ = self.levenshtein_closest(poss_global, self.context['variables'])
+        LOGGER.debug("Fixing global. From {} to global {}.".format(groups[0], closest))
+        return 'global {}'.format(closest)
 
     def fix_def(self, match, poss_chars):
         groups = match.groups()
