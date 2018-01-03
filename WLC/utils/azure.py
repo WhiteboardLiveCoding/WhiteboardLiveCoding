@@ -36,7 +36,7 @@ class WLCAzure:
     def get_data_from_blobs(self, containers, key):
         return list(map(lambda container: self._block_blob_service.get_blob_to_text(container, key), containers))
 
-    def save_image_to_azure(self, container, image):
+    def save_image_to_azure(self, container, image, hashed):
         """
         Saves image to Azure Blob storage as a jpg. Requires BLOB_ACCOUNT and BLOB_KEY environment variables to be set.
         Uses the hash value of the image to determine if it already exists.
@@ -46,8 +46,6 @@ class WLCAzure:
         :return: Whether the image was saved and name of the file (hash value)
         """
         self.create_container_not_exists(container)
-
-        hashed = hashlib.md5(image.tobytes()).hexdigest()
 
         if self._block_blob_service.exists(container, hashed):
             LOGGER.debug('Did not save image, already found one with the same hash.')
