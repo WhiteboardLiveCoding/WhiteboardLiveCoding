@@ -60,23 +60,6 @@ def api_upload_image():
         return render_template('upload_test.html')
 
 
-@app.after_request
-def save_to_azure(response):
-    pic = g.get('pic')
-    hashed = g.get('hashed')
-    key = g.get('key')
-    code = g.get('code')
-    azure = WLCAzure()
-
-    if pic is not None and hashed is not None:
-        azure.save_image_to_azure('pictures', pic.get_image(), hashed)
-
-    if key is not None and code is not None:
-        azure.save_code_to_azure('code', 'pictures', key, code)
-
-    return response
-
-
 @app.route("/api/resubmit_code", methods=['POST', 'GET'])
 def api_resubmit_code():
     if request.method == 'POST':
@@ -94,10 +77,7 @@ def api_resubmit_code():
         else:
             test_results = []
 
-        try:
-            image = image_cache[key]
-        except KeyError:
-            image = _url_to_image('https://alpstore.blob.core.windows.net/pictures/{}'.format(key))
+        image = image_cache[key]
 
         height, width, _ = image.shape
         pic = Picture(image, 0, 0, width, height)

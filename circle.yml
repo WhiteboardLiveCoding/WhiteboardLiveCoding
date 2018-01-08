@@ -23,7 +23,7 @@ test:
 
 deployment:
   hub:
-    branch: master
+    branch: presentation
     commands:
       - docker info
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
