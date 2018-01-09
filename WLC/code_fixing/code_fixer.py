@@ -10,7 +10,7 @@ LOGGER = logging.getLogger()
 
 
 class CodeFixer:
-    PERMUTATION_LENGTH = 3
+    PERMUTATION_LENGTH = 2
     ALLOWED_DIFFERENCE = 0.25
 
     def find_closest_match(self, poss_line, regexes):
@@ -101,7 +101,7 @@ class CodeFixer:
         """
 
         perm_count, perm_length = self.permutation_count(poss_chars)
-        perm_cap = 2 ** 16
+        perm_cap = 2 ** 10
 
         return self.generate_permutation_strings(poss_chars, perm_cap, perm_count, perm_length)
 
