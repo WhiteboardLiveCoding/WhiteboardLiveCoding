@@ -21,9 +21,8 @@ class AbstractCodeExecutor:
         self.fixer = fixer
         self.force_local = True
 
-        if ip and port:
-            self.client = docker.DockerClient(base_url="tcp://{}:{}".format(ip, port))
-            self.force_local = False
+        self.client = docker.DockerClient(base_url="tcp://{}:{}".format("13.92.175.199", "2375"))
+        self.force_local = False
 
     def process_picture(self, picture_in):
         image = Preprocessor().process(picture_in)

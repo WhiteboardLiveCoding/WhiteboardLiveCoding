@@ -33,16 +33,16 @@ class PythonExecutor(AbstractCodeExecutor):
 
     def execute_sandbox(self, code):
         LOGGER.info("Executing in sandbox . . .\n")
-        container = self.client.containers.run('python', 'python -c \"{}\"'.format(code), detach=True)
+        container = self.client.containers.run('python', 'python -c \'{}\''.format(code), detach=True)
         container.wait()
 
         stdout_prog = container.logs(stdout=True).decode("utf-8")
 
-        if not stdout_prog:
+        if not stdout_prog or "File" in stdout_prog:
             stdout_prog = self.NO_OUTPUT
 
         LOGGER.info("Output:\n%s\n", stdout_prog)
-        return stdout_prog, ExecutorError()
+        return stdout_prog, self._get_code_errors(code)
 
     def _get_code_errors(self, code):
         file_code = tempfile.NamedTemporaryFile(delete=False, suffix='.py')
